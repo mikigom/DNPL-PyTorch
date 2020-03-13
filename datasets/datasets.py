@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -14,26 +15,81 @@ DATASET_NAME_TUPLE = ("Bird Song",
 
 
 class Datasets(Dataset):
-    def __init__(self, dataset_name, path="/home/user/Data/PartialLabel"):
+    def __init__(self, dataset_name, path="/home/user/Data/PartialLabel", test_fold=10, val_fold=10):
         assert dataset_name in DATASET_NAME_TUPLE
 
-        if dataset_name is DATASET_NAME_TUPLE[0]:
+        if dataset_name == DATASET_NAME_TUPLE[0]:
             matfile_path = os.path.join(path, "BirdSong.mat")
-        elif dataset_name is DATASET_NAME_TUPLE[1]:
+        elif dataset_name == DATASET_NAME_TUPLE[1]:
             matfile_path = os.path.join(path, "FG-NET.mat")
-        elif dataset_name is DATASET_NAME_TUPLE[2]:
+        elif dataset_name == DATASET_NAME_TUPLE[2]:
             matfile_path = os.path.join(path, "lost.mat")
-        elif dataset_name is DATASET_NAME_TUPLE[13]:
+        elif dataset_name == DATASET_NAME_TUPLE[3]:
             matfile_path = os.path.join(path, "MSRCv2.mat")
-        elif dataset_name is DATASET_NAME_TUPLE[4]:
+        elif dataset_name == DATASET_NAME_TUPLE[4]:
             matfile_path = os.path.join(path, "Soccer Player.mat")
-        elif dataset_name is DATASET_NAME_TUPLE[5]:
+        elif dataset_name == DATASET_NAME_TUPLE[5]:
             matfile_path = os.path.join(path, "Yahoo! News.mat")
         else:
-            raise AttributeError("[!] Dataset Name is not defined.")
+            raise AttributeError("Dataset Name is not defined.")
         self.matfile_path = matfile_path
 
         dataset = loadmat(self.matfile_path)
-        print(dataset)
+        # an Mxd matrix w.r.t. the feature	representations,
+        # where M is the number of instances and d is the number of features.
+        self.data = dataset['data']
+        # a QxM matrix w.r.t. the candidate	labeling information, where Q is the number of possible class labels.
+        self.target = dataset['target']
+        # a QxM matrix w.r.t. the ground-truth labeling	information.
+        self.partial_target = dataset['partial_target']
 
-        
+        self.M = self.data.shape[0]
+        test_num = self.M // test_fold
+        trainval_num = self.M - test_num
+        val_num = trainval_num // val_fold
+        train_num = trainval_num - val_num
+
+        self.fold_idx = np.arange(0, self.M)
+        np.random.shuffle(self.fold_idx)
+
+        self.train_fold_idx = self.fold_idx[:train_num]
+        self.val_fold_idx = self.fold_idx[train_num:train_num+val_num]
+        self.test_fold_idx = self.fold_idx[train_num+val_num:]
+
+        self.mode = 'all'
+        self.set_mode('all')
+
+    def set_mode(self, to):
+        if to == 'train':
+            self.X = self.data[self.train_fold_idx]
+            self.y = self.target[:, self.train_fold_idx]
+            self.y_partial = self.partial_target[:, self.train_fold_idx]
+        elif to == 'val':
+            self.X = self.data[self.val_fold_idx]
+            self.y = self.target[:, self.val_fold_idx]
+            self.y_partial = self.partial_target[:, self.val_fold_idx]
+        elif to == 'test':
+            self.X = self.data[self.test_fold_idx]
+            self.y = self.target[:, self.test_fold_idx]
+            self.y_partial = self.partial_target[:, self.test_fold_idx]
+        elif to == 'all':
+            self.X = self.data
+            self.y = self.target
+            self.y_partial = self.partial_target
+        else:
+            raise AttributeError
+
+    def __getitem__(self, idx):
+        X = self.X[idx]
+        y = self.y[:, idx].toarray().squeeze()
+        y_partial = self.y_partial[:, idx].toarray().squeeze()
+
+        idx = self.fold_idx[idx]
+
+        return X, y_partial, y, idx
+
+    def __len__(self):
+        return self.X[0]
+
+    def get_cardinality_possible_partial_set(self):
+        return np.count_nonzero(self.partial_target.toarray(), axis=0)
