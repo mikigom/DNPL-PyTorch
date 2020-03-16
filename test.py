@@ -6,6 +6,9 @@ datasets = Datasets("Bird Song")
 cardinality = datasets.get_cardinality_possible_partial_set()
 
 datasets.set_mode('train')
+print(datasets.get_dims)
+
+"""
 X, y_partial, y, idx = datasets[0]
 
 print(cardinality[idx], cardinality[idx] == np.count_nonzero(y_partial))
@@ -36,3 +39,4 @@ non_candidate_idx = torch.Tensor(1 - y_partial).nonzero(as_tuple=True)
 scores = torch.softmax(torch.rand(13), 0)
 print(torch.sum(scores[candidate_idx]))
 print(torch.sum(scores[non_candidate_idx]))
+"""

@@ -1,8 +1,7 @@
 import os
 import numpy as np
 
-import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from scipy.io import loadmat
 
 
@@ -45,9 +44,9 @@ class Datasets(Dataset):
 
         self.M = self.data.shape[0]
         test_num = self.M // test_fold
-        trainval_num = self.M - test_num
-        val_num = trainval_num // val_fold
-        train_num = trainval_num - val_num
+        self.trainval_num = self.M - test_num
+        val_num = self.trainval_num // val_fold
+        train_num = self.trainval_num - val_num
 
         self.fold_idx = np.arange(0, self.M)
         np.random.shuffle(self.fold_idx)
@@ -89,7 +88,20 @@ class Datasets(Dataset):
         return X, y_partial, y, idx
 
     def __len__(self):
-        return self.X[0]
+        return self.X.shape[0]
 
     def get_cardinality_possible_partial_set(self):
         return np.count_nonzero(self.partial_target.toarray(), axis=0)
+
+    def reset_trainval_split(self):
+        reshuffle_idx = np.arange(0, self.trainval_num)
+        np.random.shuffle(reshuffle_idx)
+
+        current_trainval_fold_idx = np.concatenate((self.train_fold_idx, self.val_fold_idx), axis=0)
+
+        self.train_fold_idx = current_trainval_fold_idx[reshuffle_idx[:self.train_fold_idx.shape[0]]]
+        self.val_fold_idx = current_trainval_fold_idx[self.train_fold_idx.shape[0]:]
+
+    @property
+    def get_dims(self):
+        return self.data.shape[1], self.target.shape[0]
