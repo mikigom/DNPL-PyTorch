@@ -83,15 +83,13 @@ class Datasets(Dataset):
         y = self.y[:, idx].toarray().squeeze()
         y_partial = self.y_partial[:, idx].toarray().squeeze()
 
-        idx = self.fold_idx[idx]
-
         return X, y_partial, y, idx
 
     def __len__(self):
         return self.X.shape[0]
 
     def get_cardinality_possible_partial_set(self):
-        return np.count_nonzero(self.partial_target.toarray(), axis=0)
+        return np.count_nonzero(self.y_partial.toarray(), axis=0)
 
     def reset_trainval_split(self):
         reshuffle_idx = np.arange(0, self.trainval_num)

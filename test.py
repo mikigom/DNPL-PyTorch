@@ -1,12 +1,15 @@
 import torch
 import numpy as np
 from datasets.datasets import Datasets
+from models.models import DeepModel
 
+"""
 datasets = Datasets("Bird Song")
 cardinality = datasets.get_cardinality_possible_partial_set()
 
 datasets.set_mode('train')
 print(datasets.get_dims)
+"""
 
 """
 X, y_partial, y, idx = datasets[0]
@@ -40,3 +43,7 @@ scores = torch.softmax(torch.rand(13), 0)
 print(torch.sum(scores[candidate_idx]))
 print(torch.sum(scores[non_candidate_idx]))
 """
+
+model = DeepModel(16, 4).cuda()
+out = model(torch.ones(16, 32).cuda())
+print(out.size())
