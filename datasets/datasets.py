@@ -45,7 +45,10 @@ class Datasets(Dataset):
         self.M = self.data.shape[0]
         test_num = self.M // test_fold
         self.trainval_num = self.M - test_num
-        val_num = self.trainval_num // val_fold
+        if val_fold == 0:
+            val_num = 0
+        else:
+            val_num = self.trainval_num // val_fold
         train_num = self.trainval_num - val_num
 
         self.fold_idx = np.arange(0, self.M)
@@ -80,8 +83,19 @@ class Datasets(Dataset):
 
     def __getitem__(self, idx):
         X = self.X[idx]
-        y = self.y[:, idx].toarray().squeeze()
-        y_partial = self.y_partial[:, idx].toarray().squeeze()
+
+        toarray_op = getattr(self.y, "toarray", None)
+        if callable(toarray_op):
+            y = self.y[:, idx].toarray().squeeze()
+        else:
+            y = self.y[:, idx].squeeze()
+
+        toarray_op = getattr(self.y_partial, "toarray", None)
+        if callable(toarray_op):
+            y_partial = self.y_partial[:, idx].toarray().squeeze()
+        else:
+            y_partial = self.y_partial[:, idx].squeeze()
+        # y_partial = self.y_partial[:, idx].toarray().squeeze()
 
         return X, y_partial, y, idx
 
@@ -89,7 +103,12 @@ class Datasets(Dataset):
         return self.X.shape[0]
 
     def get_cardinality_possible_partial_set(self):
-        return np.count_nonzero(self.y_partial.toarray(), axis=0)
+        toarray_op = getattr(self.y_partial, "toarray", None)
+        if callable(toarray_op):
+            y_partial = self.y_partial.toarray()
+        else:
+            y_partial = self.y_partial
+        return np.count_nonzero(y_partial, axis=0)
 
     def reset_trainval_split(self):
         reshuffle_idx = np.arange(0, self.trainval_num)

@@ -17,7 +17,7 @@ LEARNING_RATE = 1e-4
 
 
 def main():
-    datasets = Datasets("Bird Song", test_fold=10, val_fold=10)
+    datasets = Datasets("Lost", test_fold=10, val_fold=10)
 
     train_datasets = copy.deepcopy(datasets)
     train_datasets.set_mode('train')
@@ -44,7 +44,8 @@ def main():
 
     train_data_iterator = iter(train_dataloader)
     val_data_iterator = iter(val_dataloader)
-    for i in tqdm(range(NUM_ITERATIONS)):
+    t = tqdm(range(NUM_ITERATIONS))
+    for i in t:
         model.train()
 
         # Line 2) Get Batch from Training Dataset
@@ -103,6 +104,7 @@ def main():
             y_g_hat_softmax_reduced_sum.append(torch.sum(y_g_hat_softmax))
         y_g_hat_softmax_reduced_sum = torch.stack(y_g_hat_softmax_reduced_sum, dim=0)
 
+        t.set_description("Upper Loss: %s" % torch.mean(y_g_hat_softmax_reduced_sum).item())
         l_g_meta = F.binary_cross_entropy(torch.clamp(y_g_hat_softmax_reduced_sum, 0., 1.),
                                           torch.ones_like(y_g_hat_softmax_reduced_sum),
                                           reduction='sum')
