@@ -16,7 +16,7 @@ LEARNING_RATE = 1e-3
 
 
 def main():
-    datasets = Datasets("MSRCv2", test_fold=10, val_fold=0)
+    datasets = Datasets("Lost", test_fold=10, val_fold=0)
 
     train_datasets = copy.deepcopy(datasets)
     train_datasets.set_mode('train')
