@@ -8,10 +8,9 @@ from torch.utils.data import DataLoader
 
 from datasets.datasets import Datasets
 from models.models import DeepModel
-from utils import to_torch_var, ExampleLabelWeights, HLoss
+from utils import to_torch_var, ExampleLabelWeights
 
-NUM_ITERATIONS = 5000
-NUM_ITERATIONS_ON_WEIGHTS = 20
+NUM_ITERATIONS = 2000
 LEARNING_RATE = 1e-3
 
 
@@ -21,14 +20,6 @@ def main():
     train_datasets = copy.deepcopy(datasets)
     train_datasets.set_mode('train')
     train_dataloader = DataLoader(train_datasets, batch_size=64, num_workers=4, drop_last=True, shuffle=True)
-
-    h_loss = HLoss()
-
-    """
-    val_datasets = copy.deepcopy(datasets)
-    val_datasets.set_mode('val')
-    val_dataloader = DataLoader(val_datasets, batch_size=16, num_workers=4, drop_last=True, shuffle=True)
-    """
 
     test_datasets = copy.deepcopy(datasets)
     test_datasets.set_mode('test')
@@ -43,7 +34,7 @@ def main():
     in_dim, out_dim = datasets.get_dims
     model = DeepModel(in_dim, out_dim).cuda()
 
-    opt = torch.optim.Adam(model.params(), lr=LEARNING_RATE)
+    opt = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     train_data_iterator = iter(train_dataloader)
     # val_data_iterator = iter(val_dataloader)
@@ -66,7 +57,6 @@ def main():
         example_label_weights.eval()
         # Line 12
         y_f_hat = model(data_train)
-        l_e = h_loss(y_f_hat)
         y_f_hat_softmax_weighted = F.softmax(y_f_hat, dim=1)
         y_f_hat_softmax_indexed = y_f_hat_softmax_weighted[candidate_train_idx]
         y_f_hat_softmax_reduced = torch.split(y_f_hat_softmax_indexed,
@@ -76,21 +66,21 @@ def main():
         for j, y_f_hat_softmax_weighted in enumerate(y_f_hat_softmax_reduced):
             y_f_hat_softmax_reduced_weighted_sum.append(torch.sum(y_f_hat_softmax_weighted))
         y_f_hat_softmax_reduced_weighted_sum = torch.stack(y_f_hat_softmax_reduced_weighted_sum, dim=0)
+
+        lamb = i / NUM_ITERATIONS
+        target = (1 - lamb) * torch.FloatTensor(train_cardinality[idx_train.numpy()].tolist()).cuda()/out_dim \
+                  + lamb * torch.ones_like(y_f_hat_softmax_reduced_weighted_sum)
+
         l_f = F.binary_cross_entropy(torch.clamp(y_f_hat_softmax_reduced_weighted_sum, 0., 1.),
-                                     torch.ones_like(y_f_hat_softmax_reduced_weighted_sum),
+                                     target,
                                      reduction='sum')
 
-        loss = l_f + 1e-3 * (i / NUM_ITERATIONS) * l_e
+        loss = l_f
 
         # Line 13-14
         opt.zero_grad()
         loss.backward()
         opt.step()
-
-    """
-    for param in example_label_weights.params:
-        print(torch.softmax(param.data, dim=0).detach().cpu().numpy())
-    """
 
     model.eval()
 

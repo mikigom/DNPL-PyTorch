@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.autograd import Variable
 
 
@@ -13,29 +14,35 @@ class ExampleLabelWeights(nn.Module):
     def __init__(self, cardinality):
         super(ExampleLabelWeights, self).__init__()
 
-        self.params = nn.ParameterList([])
+        params = []
         for card in cardinality:
             parameter = torch.nn.Parameter(data=torch.ones(card), requires_grad=True)
-            self.params.append(parameter)
+            params.append(parameter)
 
-        self.params = self.params.cuda()
+        self.params = nn.ParameterList(params).cuda()
 
-    def forward(self, losses, inputs_idx):
-        self.lastly_used_params = []
-
-        self.weights = []
-        for example_label_idx in inputs_idx:
+    def forward(self, inputs_idx):
+        weights = []
+        for i, example_label_idx in enumerate(inputs_idx):
             example_label_weight = self.params[example_label_idx]
-            self.lastly_used_params.append(self.params[example_label_idx])
-            example_label_weight = torch.softmax(example_label_weight, dim=0)
-            self.weights.append(example_label_weight)
-        self.weights = torch.cat(self.weights, dim=0)
+            example_label_weight_softmax = torch.softmax(example_label_weight, dim=0)
+            weights.append(example_label_weight_softmax)
 
-        losses = losses * self.weights
-        self.lastly_used_params = torch.cat(self.lastly_used_params, dim=0)
-        return torch.sum(losses)
+        return weights
 
     def update_last_used_weights(self, grads, lr):
         for param, grad in zip(self.params, grads):
             if grad is not None:
                 param.data = param.data - lr * grad
+
+
+if __name__ == '__main__':
+    hloss = HLoss()
+
+    a = torch.ones((1, 4))
+    b = torch.tensor([[1., 2., 3, 4]])
+
+    print(F.softmax(a, dim=1), F.softmax(b, dim=1))
+
+    print(hloss(a))
+    print(hloss(b))
