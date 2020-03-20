@@ -20,7 +20,7 @@ class DeepModel(nn.Module):
                 ("Linear2", nn.Linear(hidden[0], hidden[1])),
                 ("BatchNorm2", nn.BatchNorm1d(hidden[1])),
                 ("ReLU2", nn.ReLU(inplace=True)),
-                # ("Dropout", nn.Dropout(0.2)),
+                ("Dropout", nn.Dropout(0.2)),
                 ("Linear3", nn.Linear(hidden[1], out_dim)),
             ])
         )

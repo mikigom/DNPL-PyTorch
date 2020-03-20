@@ -10,12 +10,12 @@ from datasets.datasets import Datasets
 from models.models import DeepModel
 from utils import to_torch_var, ExampleLabelWeights
 
-NUM_ITERATIONS = 2000
+NUM_ITERATIONS = 3000
 LEARNING_RATE = 1e-3
 
 
 def main():
-    datasets = Datasets("Lost", test_fold=10, val_fold=0)
+    datasets = Datasets("Yahoo! News", test_fold=10, val_fold=0)
 
     train_datasets = copy.deepcopy(datasets)
     train_datasets.set_mode('train')
@@ -67,9 +67,7 @@ def main():
             y_f_hat_softmax_reduced_weighted_sum.append(torch.sum(y_f_hat_softmax_weighted))
         y_f_hat_softmax_reduced_weighted_sum = torch.stack(y_f_hat_softmax_reduced_weighted_sum, dim=0)
 
-        lamb = i / NUM_ITERATIONS
-        target = (1 - lamb) * torch.FloatTensor(train_cardinality[idx_train.numpy()].tolist()).cuda()/out_dim \
-                  + lamb * torch.ones_like(y_f_hat_softmax_reduced_weighted_sum)
+        target = torch.ones_like(y_f_hat_softmax_reduced_weighted_sum)
 
         l_f = F.binary_cross_entropy(torch.clamp(y_f_hat_softmax_reduced_weighted_sum, 0., 1.),
                                      target,

@@ -11,13 +11,13 @@ from datasets.datasets import Datasets
 from models.models import DeepModel
 from utils import to_torch_var
 
-NUM_ITERATIONS = 100
+NUM_ITERATIONS = 2000
 NUM_ITERATIONS_ON_WEIGHTS = 20
-LEARNING_RATE = 1e-2
+LEARNING_RATE = 1e-3
 
 
 def main():
-    datasets = Datasets("Lost", test_fold=10, val_fold=0)
+    datasets = Datasets("Bird Song", test_fold=10, val_fold=0)
 
     train_datasets = copy.deepcopy(datasets)
     train_datasets.set_mode('train')
@@ -30,7 +30,7 @@ def main():
     in_dim, out_dim = datasets.get_dims
     model = DeepModel(in_dim, out_dim).cuda()
 
-    opt = torch.optim.Adam(model.params(), lr=LEARNING_RATE, amsgrad=True)
+    opt = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, amsgrad=True)
 
     train_data_iterator = iter(train_dataloader)
     train_cardinality = train_datasets.get_cardinality_possible_partial_set()
@@ -54,31 +54,6 @@ def main():
         opt.zero_grad()
         l_f.backward()
         opt.step()
-
-        model.eval()
-        # Ready for validation data batch
-        try:
-            data_val, y_partial_val, _, idx_val = next(train_data_iterator)
-        except StopIteration:
-            train_data_iterator = iter(train_dataloader)
-            data_val, y_partial_val, _, idx_val = next(train_data_iterator)
-
-        data_val = to_torch_var(data_val, requires_grad=False).float()
-        candidate_idx = torch.DoubleTensor(y_partial_val).cuda().nonzero(as_tuple=True)
-        # Line 8
-        y_g_hat = model(data_val)
-        y_g_hat_softmax = F.softmax(y_g_hat, dim=1)
-        y_g_hat_softmax_indexed = y_g_hat_softmax[candidate_idx]
-        y_g_hat_softmax_reduced = torch.split(y_g_hat_softmax_indexed,
-                                              train_cardinality[idx_val.numpy()].tolist())
-        y_g_hat_softmax_reduced_sum = []
-        for y_g_hat_softmax in y_g_hat_softmax_reduced:
-            y_g_hat_softmax_reduced_sum.append(torch.sum(y_g_hat_softmax))
-        y_g_hat_softmax_reduced_sum = torch.clamp(torch.stack(y_g_hat_softmax_reduced_sum, dim=0), 0., 1.)
-
-        t.set_description("Train Acc: %s, Lower loss: %s, Upper Loss: %s" %
-                          (torch.mean((torch.argmax(y_f_hat, dim=1) == label_train).float()).item(),
-                           torch.mean(l_f).item(), torch.mean(y_g_hat_softmax_reduced_sum).item()))
 
     model.eval()
 
