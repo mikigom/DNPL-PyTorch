@@ -11,9 +11,9 @@ from datasets.datasets import Datasets
 from models.models import DeepModel
 from utils import to_torch_var, ExampleLabelWeights
 
-NUM_ITERATIONS = 2000
+NUM_ITERATIONS = 5000
 NUM_ITERATIONS_ON_WEIGHTS = 20
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 1e-4
 
 
 def main():
@@ -40,7 +40,7 @@ def main():
     in_dim, out_dim = datasets.get_dims
     model = DeepModel(in_dim, out_dim).cuda()
 
-    opt = torch.optim.SGD(model.params(), lr=LEARNING_RATE)
+    opt = torch.optim.Adam(model.params(), lr=LEARNING_RATE)
 
     train_data_iterator = iter(train_dataloader)
     val_data_iterator = iter(val_dataloader)
@@ -66,7 +66,9 @@ def main():
         meta_model = DeepModel(in_dim, out_dim).cuda()
         meta_model.load_state_dict(model.state_dict())
         meta_model.cuda()
+        meta_model.train()
 
+        example_label_weights.train()
         # Line 4
         y_f_hat = meta_model(data_train_with_candidates)
         C = F.cross_entropy(y_f_hat, y_train_with_candidates, reduce=False)
@@ -90,6 +92,7 @@ def main():
         data_val = to_torch_var(data_val, requires_grad=False).float()
         candidate_idx = torch.DoubleTensor(y_partial_val).cuda().nonzero(as_tuple=True)
         # Line 8
+        meta_model.eval()
         y_g_hat = meta_model(data_val)
         y_g_hat_softmax = F.softmax(y_g_hat, dim=1)
         y_g_hat_softmax_indexed = y_g_hat_softmax[candidate_idx]
@@ -100,14 +103,14 @@ def main():
             y_g_hat_softmax_reduced_sum.append(torch.sum(y_g_hat_softmax))
         y_g_hat_softmax_reduced_sum = torch.stack(y_g_hat_softmax_reduced_sum, dim=0)
 
-        l_g_meta = F.binary_cross_entropy(y_g_hat_softmax_reduced_sum,
+        l_g_meta = F.binary_cross_entropy(torch.clamp(y_g_hat_softmax_reduced_sum, 0., 1.),
                                           torch.ones_like(y_g_hat_softmax_reduced_sum),
                                           reduction='sum')
 
         grad_eps = torch.autograd.grad(l_g_meta, example_label_weights.params, only_inputs=True, allow_unused=True)
-        for j in range(100):
-            example_label_weights.update_last_used_weights(grad_eps, 5e-1)
+        example_label_weights.update_last_used_weights(grad_eps, 5e-1)
 
+        example_label_weights.eval()
         # Line 12
         y_f_hat = model(data_train_with_candidates)
         C = F.cross_entropy(y_f_hat, y_train_with_candidates, reduce=False)
@@ -117,6 +120,26 @@ def main():
         opt.zero_grad()
         l_f.backward()
         opt.step()
+
+    """
+    for param in example_label_weights.params:
+        print(torch.softmax(param.data, dim=0).detach().cpu().numpy())
+    """
+
+    model.eval()
+
+    is_correct = []
+    for X, y_partial, y, idx in test_dataloader:
+        data_test = to_torch_var(X, requires_grad=False).float()
+        y_test = to_torch_var(y, requires_grad=False).long()
+        label_test = torch.argmax(y_test, dim=1)
+
+        logits_predicted = model(data_test)
+        probs_predicted = torch.softmax(logits_predicted, dim=1)
+        label_predicted = torch.argmax(probs_predicted, dim=1)
+        is_correct.append(label_predicted == label_test)
+    is_correct = torch.cat(is_correct, dim=0)
+    print("Test Acc: %s" % torch.mean(is_correct.float()).detach().cpu().numpy())
 
 
 if __name__ == '__main__':
