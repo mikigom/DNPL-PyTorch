@@ -10,22 +10,27 @@ from datasets.datasets import Datasets
 from models.models import DeepModel
 from utils import to_torch_var
 
-NUM_ITERATIONS = 500
+NUM_ITERATIONS = 2000
 LEARNING_RATE = 1e-3
 
 
 def main():
-    datasets = Datasets("Soccer Player", test_fold=10, val_fold=0)
+    datasets = Datasets("Yahoo! News", test_fold=10, val_fold=0)
 
-    train_datasets = copy.deepcopy(datasets)
-    train_datasets.set_mode('train')
-    train_dataloader = DataLoader(train_datasets, batch_size=48, num_workers=4, drop_last=True, shuffle=True)
+    train_datasets = list()
+    train_dataloaders = list()
+    for i in (1, 2, 3, 4, 5, None):
+        train_dataset = copy.deepcopy(datasets)
+        train_dataset.set_mode('train', cardinality_constraint=i)
+        train_dataloader = DataLoader(train_dataset, batch_size=32, num_workers=4, drop_last=True, shuffle=True)
+
+        train_datasets.append(train_dataset)
+        train_dataloaders.append(train_dataloader)
 
     test_datasets = copy.deepcopy(datasets)
     test_datasets.set_mode('test')
     test_dataloader = DataLoader(test_datasets, batch_size=16, num_workers=4, drop_last=False)
 
-    train_cardinality = train_datasets.get_cardinality_possible_partial_set()
     # val_cardinality = val_datasets.get_cardinality_possible_partial_set()
 
     in_dim, out_dim = datasets.get_dims
@@ -33,19 +38,21 @@ def main():
 
     opt = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    train_data_iterator = iter(train_dataloader)
-    # val_data_iterator = iter(val_dataloader)
-    t = tqdm(range(NUM_ITERATIONS))
+    train_data_iterator = iter(train_dataloaders[0])
+    train_cardinality = train_datasets[0].get_cardinality_possible_partial_set()
 
+    t = tqdm(range(NUM_ITERATIONS))
     for i in t:
         model.train()
         # Line 2) Get Batch from Training Dataset
         # Expected Question: "Why is this part so ugly?"
         # Answer: "Please refer https://github.com/pytorch/pytorch/issues/1917 ."
+        dataloader_index = i // (NUM_ITERATIONS // 6)
         try:
             data_train, y_partial_train, _, idx_train = next(train_data_iterator)
         except StopIteration:
-            train_data_iterator = iter(train_dataloader)
+            train_data_iterator = iter(train_dataloaders[dataloader_index])
+            train_cardinality = train_datasets[dataloader_index].get_cardinality_possible_partial_set()
             data_train, y_partial_train, _, idx_train = next(train_data_iterator)
 
         data_train = to_torch_var(data_train, requires_grad=False).float()
@@ -67,7 +74,8 @@ def main():
         target = torch.ones_like(y_f_hat_softmax_reduced_weighted_sum)
 
         l_f = F.binary_cross_entropy(torch.clamp(y_f_hat_softmax_reduced_weighted_sum, 0., 1.),
-                                     target, reduction='sum')
+                                     target,
+                                     reduction='sum')
 
         loss = l_f
 
