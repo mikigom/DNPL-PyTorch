@@ -128,7 +128,7 @@ class Datasets(Dataset):
         current_trainval_fold_idx = np.concatenate((self.train_fold_idx, self.val_fold_idx), axis=0)
 
         self.train_fold_idx = current_trainval_fold_idx[reshuffle_idx[:self.train_fold_idx.shape[0]]]
-        self.val_fold_idx = current_trainval_fold_idx[self.train_fold_idx.shape[0]:]
+        self.val_fold_idx = current_trainval_fold_idx[reshuffle_idx[self.train_fold_idx.shape[0]:]]
 
     @property
     def get_dims(self):

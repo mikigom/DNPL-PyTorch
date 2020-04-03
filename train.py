@@ -10,7 +10,7 @@ from datasets.datasets import Datasets
 from models.models import DeepModel
 from utils import to_torch_var
 
-NUM_ITERATIONS = 500
+NUM_ITERATIONS = 2000
 LEARNING_RATE = 1e-3
 
 
