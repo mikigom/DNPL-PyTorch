@@ -87,6 +87,9 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
     model.eval()
 
     is_correct = []
+    if dataset_name == "FG-NET":
+        is_mae3 = []
+        is_mae5 = []
     for X, y_partial, y, idx in test_dataloader:
         x = to_torch_var(X, requires_grad=False).float()
         if use_norm:
@@ -98,11 +101,23 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
         y_bar = torch.softmax(s_bar, dim=1)
         y_bar = torch.argmax(y_bar, dim=1)
         is_correct.append(y_bar == y)
+        if dataset_name == "FG-NET":
+            is_mae3.append(torch.abs(y_bar - y) <= 3)
+            is_mae5.append(torch.abs(y_bar - y) <= 5)
+
     is_correct = torch.cat(is_correct, dim=0)
     acc = torch.mean(is_correct.float()).detach().cpu().numpy()
-    print("%s" % acc)
-    return acc
+    if dataset_name != "FG-NET":
+        print("%s" % acc)
+        return acc
+    else:
+        is_mae3 = torch.cat(is_mae3, dim=0)
+        is_mae5 = torch.cat(is_mae5, dim=0)
+        mae3 = torch.mean(is_mae3.float()).detach().cpu().numpy()
+        mae5 = torch.mean(is_mae5.float()).detach().cpu().numpy()
+        print("%s / %s / %s" % (acc, mae3, mae5))
+        return acc, mae3, mae5
 
 
 if __name__ == '__main__':
-    main("Yahoo! News", lamd=0.01, num_epoch=25, use_norm=False)
+    main("FG-NET", lamd=.01, num_epoch=50, use_norm=False)
