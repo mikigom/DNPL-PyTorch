@@ -15,7 +15,7 @@ if __name__ == '__main__':
                 acc = main("Bird Song", lamd=lamd, num_epoch=epoch, use_norm=True)
                 accs.append(acc)
 
-            with open('exp_birdsong/epoch_%s_lambda_%s.txt' % str(epoch, lamd), 'w') as f:
+            with open('exp_birdsong/epoch_%s_lambda_%s.txt' % (str(epoch), str(lamd)), 'w') as f:
                 for acc in accs:
                     f.write("%s\n" % acc)
 

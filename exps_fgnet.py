@@ -15,6 +15,6 @@ if __name__ == '__main__':
                 acc = main("FG-NET", lamd=lamd, num_epoch=epoch, use_norm=False)
                 accs.append(acc)
 
-            with open('exp_fgnet/epoch_%s_lambda_%s.txt' % str(epoch, lamd), 'w') as f:
+            with open('exp_fgnet/epoch_%s_lambda_%s.txt' % (str(epoch), str(lamd)), 'w') as f:
                 for acc in accs:
                     f.write("%s,%s,%s\n" % (acc[0], acc[1], acc[2]))

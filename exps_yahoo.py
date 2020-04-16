@@ -15,7 +15,7 @@ if __name__ == '__main__':
                 acc = main("Yahoo! News", lamd=lamd, num_epoch=epoch, use_norm=False)
                 accs.append(acc)
 
-            with open('exp_yahoo/epoch_%s_lambda_%s.txt' % str(epoch, lamd), 'w') as f:
+            with open('exp_yahoo/epoch_%s_lambda_%s.txt' % (str(epoch), str(lamd)), 'w') as f:
                 for acc in accs:
                     f.write("%s\n" % acc)
 

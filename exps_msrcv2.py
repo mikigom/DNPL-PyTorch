@@ -15,6 +15,6 @@ if __name__ == '__main__':
                 acc = main("MSRCv2", lamd=lamd, num_epoch=epoch, use_norm=False)
                 accs.append(acc)
 
-            with open('exp_msrcv2/epoch_%s_lambda_%s.txt' % str(epoch, lamd), 'w') as f:
+            with open('exp_msrcv2/epoch_%s_lambda_%s.txt' % (str(epoch), str(lamd)), 'w') as f:
                 for acc in accs:
                     f.write("%s\n" % acc)
