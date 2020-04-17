@@ -1,9 +1,7 @@
-import math
 import copy
 
 import numpy as np
 import torch
-from tqdm import tqdm
 import torch.nn.functional as F
 
 from torch.utils.data import DataLoader
@@ -31,8 +29,10 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
 
     in_dim, out_dim = datasets.get_dims
     model = DeepModel(in_dim, out_dim).cuda()
+    temp_model = DeepModel(in_dim, out_dim).cuda()
 
-    opt = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    opt = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
+    opt_temp = torch.optim.Adam(temp_model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
 
     train_data_iterator = iter(train_dataloader)
     current_iter = 0.
@@ -69,15 +69,29 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
 
         dot_product = torch.bmm(s_bar, s.view(s.size(0), -1, 1))
         dot_product = torch.clamp(dot_product, 0., 1.)
-        E = -torch.log(dot_product + 1e-7)
+        g = -torch.log(dot_product + 1e-7)
 
-        elementwise_mul = s * s_bar
-        H = lamd * (elementwise_mul * torch.log(elementwise_mul + 1e-7)).sum(1)
-        v = torch.autograd.grad(torch.mean(H), s_bar, grad_outputs=None, retain_graph=None,
-                                create_graph=False, only_inputs=True, allow_unused=False)[0].detach()
+        temp_model.load_state_dict(copy.deepcopy(model.state_dict()))
+        temp_model.train()
+        before_update = []
+        for param_temp in temp_model.parameters():
+            before_update.append(param_temp.clone())
 
-        u = torch.bmm(s_bar, v.view(v.size(0), -1, 1)).squeeze()
-        L = torch.mean(E - u)
+        s_bar_temp = F.softmax(temp_model(x), dim=1)
+
+        h = (s_bar_temp * torch.log(s_bar_temp + 1e-7)).sum(1)
+        h = torch.mean(h)
+        opt_temp.state = opt.state
+        opt_temp.zero_grad()
+        h.backward()
+        opt_temp.step()
+
+        u = 0
+        for param, param_temp, param_temp_before in zip(model.parameters(), temp_model.parameters(), before_update):
+            adaptive_grad = param_temp_before - param_temp
+            u += torch.sum(param * adaptive_grad.detach())
+
+        L = torch.mean(g) - lamd * u
 
         # Line 13-14
         opt.zero_grad()
@@ -120,4 +134,4 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
 
 
 if __name__ == '__main__':
-    main("FG-NET", lamd=.01, num_epoch=50, use_norm=False)
+    main("MSRCv2", lamd=0.01, num_epoch=25, use_norm=False)
