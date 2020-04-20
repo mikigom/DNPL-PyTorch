@@ -15,7 +15,7 @@ from yogi.yogi import Yogi
 LEARNING_RATE = 1e-3
 
 
-def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
+def main(dataset_name, beta=0.01, lamd=1e-3, num_epoch=20, use_norm=False):
     datasets = Datasets(dataset_name, test_fold=10, val_fold=0)
 
     train_datasets = copy.deepcopy(datasets)
@@ -32,7 +32,7 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
     in_dim, out_dim = datasets.get_dims
     model = DeepModel(in_dim, out_dim).cuda()
 
-    opt = Yogi(model.parameters(), lr=LEARNING_RATE)
+    opt = Yogi(model.parameters(), lr=LEARNING_RATE, weight_decay=lamd)
 
     train_data_iterator = iter(train_dataloader)
     current_iter = 0.
@@ -74,7 +74,7 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
         dot_product = torch.clamp(dot_product, 0., 1.)
         g = -torch.log(dot_product + 1e-7)
 
-        L = torch.mean(g) + lamd * h
+        L = torch.mean(g) + beta * h
 
         # Line 13-14
         opt.zero_grad()
@@ -117,4 +117,4 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
 
 
 if __name__ == '__main__':
-    main("Soccer Player", lamd=1e-4, num_epoch=30, use_norm=False)
+    main("Soccer Player", beta=1e-4, num_epoch=30, use_norm=False)

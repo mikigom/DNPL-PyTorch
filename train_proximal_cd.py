@@ -15,7 +15,7 @@ from yogi.yogi import Yogi
 LEARNING_RATE = 1e-3
 
 
-def main(dataset_name, lamd=0.01, mu=0.001, num_epoch=20, use_norm=False):
+def main(dataset_name, beta=0.01, mu=0.001, lamd=1e-3, num_epoch=20, use_norm=False):
     datasets = Datasets(dataset_name, test_fold=10, val_fold=0)
 
     train_datasets = copy.deepcopy(datasets)
@@ -33,8 +33,8 @@ def main(dataset_name, lamd=0.01, mu=0.001, num_epoch=20, use_norm=False):
     model = DeepModel(in_dim, out_dim).cuda()
     temp_model = DeepModel(in_dim, out_dim).cuda()
 
-    opt = Yogi(model.parameters(), lr=LEARNING_RATE)
-    opt_temp = Yogi(temp_model.parameters(), lr=LEARNING_RATE)
+    opt = Yogi(model.parameters(), lr=LEARNING_RATE, weight_decay=lamd)
+    opt_temp = Yogi(temp_model.parameters(), lr=LEARNING_RATE, weight_decay=lamd)
 
     train_data_iterator = iter(train_dataloader)
     current_iter = 0.
@@ -95,7 +95,7 @@ def main(dataset_name, lamd=0.01, mu=0.001, num_epoch=20, use_norm=False):
             u += torch.sum(param * adaptive_grad.detach())
             proximal_term += torch.sum((param - param_temp_before)**2)
 
-        L = torch.mean(g) + mu * proximal_term - lamd * u
+        L = torch.mean(g) + mu * proximal_term - beta * u
 
         # Line 13-14
         opt.zero_grad()
@@ -138,4 +138,4 @@ def main(dataset_name, lamd=0.01, mu=0.001, num_epoch=20, use_norm=False):
 
 
 if __name__ == '__main__':
-    main("Soccer Player", lamd=0.01, mu=1e-5, num_epoch=30, use_norm=False)
+    main("Soccer Player", beta=0.01, mu=1e-5, num_epoch=30, use_norm=False)
