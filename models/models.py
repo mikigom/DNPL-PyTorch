@@ -7,7 +7,7 @@ from .meta_layers import MetaLinear, MetaBatchNorm1d
 
 
 class DeepModel(nn.Module):
-    def __init__(self, in_dim, out_dim, hidden=(512, 512)):
+    def __init__(self, in_dim, out_dim, hidden=(256, 512, 1024)):
         super(DeepModel, self).__init__()
         if hidden is None:
             hidden = (512, 1024)
@@ -20,7 +20,10 @@ class DeepModel(nn.Module):
                 ("Linear2", nn.Linear(hidden[0], hidden[1])),
                 ("BatchNorm2", nn.BatchNorm1d(hidden[1])),
                 ("ReLU2", nn.ELU(inplace=True)),
-                ("Linear3", nn.Linear(hidden[1], out_dim)),
+                ("Linear3", nn.Linear(hidden[1], hidden[2])),
+                ("BatchNorm3", nn.BatchNorm1d(hidden[2])),
+                ("ReLU3", nn.ELU(inplace=True)),
+                ("Linear4", nn.Linear(hidden[2], out_dim)),
             ])
         )
 
