@@ -1,9 +1,7 @@
-import math
 import copy
 
 import numpy as np
 import torch
-from tqdm import tqdm
 import torch.nn.functional as F
 
 from torch.utils.data import DataLoader
@@ -12,7 +10,9 @@ from datasets.datasets import Datasets
 from models.models import DeepModel
 from utils import to_torch_var
 
-LEARNING_RATE = 1e-3
+from yogi.yogi import Yogi
+
+LEARNING_RATE = 1e-2
 
 
 def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
@@ -20,7 +20,7 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
 
     train_datasets = copy.deepcopy(datasets)
     train_datasets.set_mode('train')
-    train_dataloader = DataLoader(train_datasets, batch_size=64, num_workers=4, drop_last=True, shuffle=True)
+    train_dataloader = DataLoader(train_datasets, batch_size=128, num_workers=4, drop_last=True, shuffle=True)
 
     test_datasets = copy.deepcopy(datasets)
     test_datasets.set_mode('test')
@@ -32,7 +32,7 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
     in_dim, out_dim = datasets.get_dims
     model = DeepModel(in_dim, out_dim).cuda()
 
-    opt = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    opt = Yogi(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
 
     train_data_iterator = iter(train_dataloader)
     current_iter = 0.
@@ -65,19 +65,16 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
         # Line 12
         y_f_hat = model(x)
         s_bar = F.softmax(y_f_hat, dim=1)
+        h = -(s_bar * torch.log(s_bar + 1e-7)).sum(1)
+        h = torch.mean(h)
+
         s_bar = s_bar.view(s_bar.size(0), 1, -1)
 
         dot_product = torch.bmm(s_bar, s.view(s.size(0), -1, 1))
         dot_product = torch.clamp(dot_product, 0., 1.)
-        E = -torch.log(dot_product + 1e-7)
+        g = -torch.log(dot_product + 1e-7)
 
-        elementwise_mul = s * s_bar
-        H = lamd * (elementwise_mul * torch.log(elementwise_mul + 1e-7)).sum(1)
-        v = torch.autograd.grad(torch.mean(H), s_bar, grad_outputs=None, retain_graph=None,
-                                create_graph=False, only_inputs=True, allow_unused=False)[0].detach()
-
-        u = torch.bmm(s_bar, v.view(v.size(0), -1, 1)).squeeze()
-        L = torch.mean(E - u)
+        L = torch.mean(g) + lamd * h
 
         # Line 13-14
         opt.zero_grad()
@@ -120,4 +117,4 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
 
 
 if __name__ == '__main__':
-    main("FG-NET", lamd=.01, num_epoch=50, use_norm=False)
+    main("Soccer Player", lamd=1e-4, num_epoch=30, use_norm=False)
