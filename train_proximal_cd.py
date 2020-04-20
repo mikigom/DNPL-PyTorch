@@ -12,7 +12,7 @@ from utils import to_torch_var
 
 from yogi.yogi import Yogi
 
-LEARNING_RATE = 1e-2
+LEARNING_RATE = 1e-3
 
 
 def main(dataset_name, lamd=0.01, mu=0.001, num_epoch=20, use_norm=False):
@@ -33,8 +33,8 @@ def main(dataset_name, lamd=0.01, mu=0.001, num_epoch=20, use_norm=False):
     model = DeepModel(in_dim, out_dim).cuda()
     temp_model = DeepModel(in_dim, out_dim).cuda()
 
-    opt = Yogi(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
-    opt_temp = Yogi(temp_model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
+    opt = Yogi(model.parameters(), lr=LEARNING_RATE)
+    opt_temp = Yogi(temp_model.parameters(), lr=LEARNING_RATE)
 
     train_data_iterator = iter(train_dataloader)
     current_iter = 0.

@@ -4,7 +4,7 @@ import train_naive
 import train_proximal_cd
 
 repeat = 50
-epoch_list = (25, 50)
+epoch_list = (25, 50, 100)
 mu_list = (1e-3, 1e-4, 1e-5)
 lambda_list = 10 ** np.arange(-5, 3.5, 0.5)
 lambda_list = lambda_list.tolist()
