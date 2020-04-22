@@ -8,8 +8,9 @@ epoch_list = (50,)
 mu_list = (1e-3, 1e-4, 1e-5)
 # lambda_list = 10 ** np.arange(-5, 3.5, 0.5)
 # lambda_list = lambda_list.tolist()
-beta_list = (1e-4, 5e-4, 1e-3)
-lamd_list = (1e-3, 5e-4, 1e-4)
+beta_list = (1e-3, 5e-4, 1e-4)
+lamd_list = (1e-6, 5e-6, 1e-5)
+
 
 if __name__ == '__main__':
     for epoch in epoch_list:

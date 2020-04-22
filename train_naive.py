@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from datasets.datasets import Datasets
-from models.models import DeepModel
+from models.models import DeepModel, SmallModel
 from utils import to_torch_var
 
 from yogi.yogi import Yogi
@@ -30,7 +30,10 @@ def main(dataset_name, beta=0.01, lamd=1e-3, num_epoch=20, use_norm=False):
     feature_std = torch.Tensor(train_datasets.X.std(0)[np.newaxis]).cuda()
 
     in_dim, out_dim = datasets.get_dims
-    model = DeepModel(in_dim, out_dim).cuda()
+    if dataset_name in ("Lost", "MSRCv2", "Bird Song"):
+        model = SmallModel(in_dim, out_dim).cuda()
+    else:
+        model = DeepModel(in_dim, out_dim).cuda()
 
     opt = Yogi(model.parameters(), lr=LEARNING_RATE, weight_decay=lamd)
 
