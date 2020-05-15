@@ -1,7 +1,7 @@
+import os
+
 import numpy as np
-import math
 import train_naive
-import train_proximal_cd
 
 repeat = 20
 epoch_list = (50,)
@@ -21,6 +21,7 @@ if __name__ == '__main__':
                     acc = train_naive.main("Bird Song", beta=beta, lamd=lamd, num_epoch=epoch, use_norm=True)
                     accs.append(acc)
 
+                os.makedirs("exp_birdsong/naive", exist_ok=True)
                 with open('exp_birdsong/naive/epoch_%s_beta_%s_lambda_%s.txt' % (str(epoch), str(beta), str(lamd)), 'w') as f:
                     for acc in accs:
                         f.write("%s\n" % acc)

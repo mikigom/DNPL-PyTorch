@@ -1,7 +1,6 @@
+import os
 import numpy as np
-import math
 import train_naive
-import train_proximal_cd
 
 repeat = 50
 epoch_list = (50,)
@@ -20,6 +19,7 @@ if __name__ == '__main__':
                     acc = train_naive.main("FG-NET", beta=beta, lamd=lamd, num_epoch=epoch, use_norm=False)
                     accs.append(acc)
 
+                os.makedirs("exp_fgnet/naive", exist_ok=True)
                 with open('exp_fgnet/naive/epoch_%s_beta_%s_lambda_%s.txt' % (str(epoch), str(beta), str(lamd)), 'w') as f:
                     for acc in accs:
                         f.write("%s,%s,%s\n" % (acc[0], acc[1], acc[2]))
