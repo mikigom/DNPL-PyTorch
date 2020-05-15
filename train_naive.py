@@ -7,18 +7,20 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from datasets.datasets import Datasets
-from models.models import DeepModel
+from models.models import DeepModel, SmallModel
 from utils import to_torch_var
+
+from yogi.yogi import Yogi
 
 LEARNING_RATE = 1e-3
 
 
-def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
+def main(dataset_name, beta=0.01, lamd=1e-3, num_epoch=20, use_norm=False):
     datasets = Datasets(dataset_name, test_fold=10, val_fold=0)
 
     train_datasets = copy.deepcopy(datasets)
     train_datasets.set_mode('train')
-    train_dataloader = DataLoader(train_datasets, batch_size=64, num_workers=4, drop_last=True, shuffle=True)
+    train_dataloader = DataLoader(train_datasets, batch_size=128, num_workers=4, drop_last=True, shuffle=True)
 
     test_datasets = copy.deepcopy(datasets)
     test_datasets.set_mode('test')
@@ -28,11 +30,12 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
     feature_std = torch.Tensor(train_datasets.X.std(0)[np.newaxis]).cuda()
 
     in_dim, out_dim = datasets.get_dims
-    model = DeepModel(in_dim, out_dim).cuda()
-    temp_model = DeepModel(in_dim, out_dim).cuda()
+    if dataset_name in ("Lost", "MSRCv2", "Bird Song"):
+        model = SmallModel(in_dim, out_dim).cuda()
+    else:
+        model = DeepModel(in_dim, out_dim).cuda()
 
-    opt = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
-    opt_temp = torch.optim.Adam(temp_model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
+    opt = Yogi(model.parameters(), lr=LEARNING_RATE, weight_decay=lamd)
 
     train_data_iterator = iter(train_dataloader)
     current_iter = 0.
@@ -65,33 +68,16 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
         # Line 12
         y_f_hat = model(x)
         s_bar = F.softmax(y_f_hat, dim=1)
+        h = -(s_bar * torch.log(s_bar + 1e-7)).sum(1)
+        h = torch.mean(h)
+
         s_bar = s_bar.view(s_bar.size(0), 1, -1)
 
         dot_product = torch.bmm(s_bar, s.view(s.size(0), -1, 1))
         dot_product = torch.clamp(dot_product, 0., 1.)
         g = -torch.log(dot_product + 1e-7)
 
-        temp_model.load_state_dict(copy.deepcopy(model.state_dict()))
-        temp_model.train()
-        before_update = []
-        for param_temp in temp_model.parameters():
-            before_update.append(param_temp.clone())
-
-        s_bar_temp = F.softmax(temp_model(x), dim=1)
-
-        h = (s_bar_temp * torch.log(s_bar_temp + 1e-7)).sum(1)
-        h = torch.mean(h)
-        opt_temp.state = opt.state
-        opt_temp.zero_grad()
-        h.backward()
-        opt_temp.step()
-
-        u = 0
-        for param, param_temp, param_temp_before in zip(model.parameters(), temp_model.parameters(), before_update):
-            adaptive_grad = param_temp_before - param_temp
-            u += torch.sum(param * adaptive_grad.detach())
-
-        L = torch.mean(g) - lamd * u
+        L = torch.mean(g) + beta * h
 
         # Line 13-14
         opt.zero_grad()
@@ -134,4 +120,4 @@ def main(dataset_name, lamd=0.01, num_epoch=20, use_norm=False):
 
 
 if __name__ == '__main__':
-    main("MSRCv2", lamd=0.01, num_epoch=25, use_norm=False)
+    main("Soccer Player", beta=1e-4, num_epoch=30, use_norm=False)

@@ -17,16 +17,16 @@ if __name__ == '__main__':
             for lamd in lamd_list:
                 accs = list()
                 for i in range(repeat):
-                    acc = train_naive.main("Yahoo! News", beta=beta, lamd=lamd, num_epoch=epoch, use_norm=False)
+                    acc = train_naive.main("Soccer Player", beta=beta, lamd=lamd, num_epoch=epoch, use_norm=False)
                     accs.append(acc)
 
-                with open('exp_yahoo/naive/epoch_%s_beta_%s_lambda_%s.txt' % (str(epoch), str(beta), str(lamd)), 'w') as f:
+                with open('exp_soccer/naive/epoch_%s_beta_%s_lambda_%s.txt' % (str(epoch), str(beta), str(lamd)), 'w') as f:
                     for acc in accs:
                         f.write("%s\n" % acc)
 
                 avg = np.mean(accs)
                 stdev = np.std(accs)
-                with open('exp_yahoo/naive_records.txt', 'a') as f:
+                with open('exp_soccer/naive_records.txt', 'a') as f:
                     f.write("%s, %s, %s, %s, %s\n" % (str(epoch), str(beta), str(lamd), str(avg), str(stdev)))
 
     """
@@ -35,10 +35,10 @@ if __name__ == '__main__':
             for mu in mu_list:
                 accs = list()
                 for i in range(repeat):
-                    acc = train_proximal_cd.main("Yahoo! News", lamd=lamd, mu=mu, num_epoch=epoch, use_norm=False)
+                    acc = train_proximal_cd.main("Soccer Player", lamd=lamd, mu=mu, num_epoch=epoch, use_norm=False)
                     accs.append(acc)
 
-                with open('exp_yahoo/proximal_dc/epoch_%s_lambda_%s_mu_%s.txt' % (str(epoch), str(lamd), str(mu)), 'w') as f:
+                with open('exp_soccer/proximal_dc/epoch_%s_lambda_%s_mu_%s.txt' % (str(epoch), str(lamd), str(mu)), 'w') as f:
                     for acc in accs:
                         f.write("%s\n" % acc)
     """
