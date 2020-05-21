@@ -20,8 +20,8 @@ if __name__ == '__main__':
             for lamd in lamd_list:
                 accs = list()
                 for i in range(repeat):
-                    torch.manual_seed(2020 + i)
-                    np.random.seed(2020 + i)
+                    torch.manual_seed(i)
+                    np.random.seed(i)
 
                     acc = train_naive.main("Yahoo! News", beta=beta, lamd=lamd, num_epoch=epoch, use_norm=False)
                     accs.append(acc)
