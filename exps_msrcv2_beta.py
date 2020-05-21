@@ -26,14 +26,14 @@ if __name__ == '__main__':
                     acc = train_naive.main("MSRCv2", beta=beta, lamd=lamd, num_epoch=epoch, use_norm=False)
                     accs.append(acc)
 
-                os.makedirs("exp_msrcv2/naive", exist_ok=True)
-                with open('exp_msrcv2/naive/epoch_%s_beta_%s_lambda_%s.txt' % (str(epoch), str(beta), str(lamd)), 'w') as f:
+                os.makedirs("exp_msrcv2_beta/naive", exist_ok=True)
+                with open('exp_msrcv2_beta/naive/epoch_%s_beta_%s_lambda_%s.txt' % (str(epoch), str(beta), str(lamd)), 'w') as f:
                     for acc in accs:
                         f.write("%s\n" % acc)
 
                 avg = np.mean(accs)
                 stdev = np.std(accs)
-                with open('exp_msrcv2/naive_records.txt', 'a') as f:
+                with open('exp_msrcv2_beta/naive_records.txt', 'a') as f:
                     f.write("%s, %s, %s, %s, %s\n" % (str(epoch), str(beta), str(lamd), str(avg), str(stdev)))
 
     """
