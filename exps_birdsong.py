@@ -3,10 +3,8 @@ import numpy as np
 import train_naive
 import torch
 
-torch.manual_seed(2020)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
-np.random.seed(2020)
 
 repeat = 20
 epoch_list = (50,)
@@ -23,6 +21,9 @@ if __name__ == '__main__':
             for lamd in lamd_list:
                 accs = list()
                 for i in range(repeat):
+                    torch.manual_seed(2020 + i)
+                    np.random.seed(2020 + i)
+
                     acc = train_naive.main("Bird Song", beta=beta, lamd=lamd, num_epoch=epoch, use_norm=True)
                     accs.append(acc)
 
