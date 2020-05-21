@@ -30,7 +30,7 @@ def main(dataset_name, beta=0.01, lamd=1e-3, num_epoch=20, use_norm=False):
     feature_std = torch.Tensor(train_datasets.X.std(0)[np.newaxis]).cuda()
 
     in_dim, out_dim = datasets.get_dims
-    if dataset_name in ("Lost", "MSRCv2"):
+    if dataset_name in ("Lost", "MSRCv2", "Bird Song"):
         model = SmallModel(in_dim, out_dim).cuda()
     else:
         model = DeepModel(in_dim, out_dim).cuda()
