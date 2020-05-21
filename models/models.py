@@ -30,15 +30,19 @@ class SmallModel(nn.Module):
         return self.model(x)
 """
 
+
 class SmallModel(nn.Module):
-    def __init__(self, in_dim, out_dim, hidden=(256, 512)):
+    def __init__(self, in_dim, out_dim, hidden=(512,)):
         super(SmallModel, self).__init__()
         if hidden is None:
-            hidden = (512, 1024)
+            hidden = (512,)
 
         self.model = nn.Sequential(
             OrderedDict([
-                ("Linear", nn.Linear(in_dim, out_dim)),
+                ("Linear1", nn.Linear(in_dim, hidden[0])),
+                ("BatchNorm1", nn.BatchNorm1d(hidden[0])),
+                ("ReLU1", nn.ELU(inplace=True)),
+                ("Linear2", nn.Linear(hidden[0], out_dim))
             ])
         )
 
