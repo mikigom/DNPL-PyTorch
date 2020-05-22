@@ -11,13 +11,15 @@ epoch_list = (50,)
 mu_list = (1e-3, 1e-4, 1e-5)
 # lambda_list = 10 ** np.arange(-5, 3.5, 0.5)
 # lambda_list = lambda_list.tolist()
-beta_list = (1., 5e-1, 1e-1, 5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4, 5e-5, 1e-5)
+beta_list = (-5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0.)
 lamd_list = (1e-6,)
 
 if __name__ == '__main__':
     for epoch in epoch_list:
         for beta in beta_list:
             for lamd in lamd_list:
+                beta = 10 ** beta
+
                 accs = list()
                 for i in range(repeat):
                     torch.manual_seed(i)

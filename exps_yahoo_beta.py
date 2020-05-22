@@ -6,7 +6,7 @@ import torch
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-repeat = 50
+repeat = 10
 epoch_list = (50,)
 mu_list = (1e-3, 1e-4, 1e-5)
 # lambda_list = 10 ** np.arange(-5, 3.5, 0.5)
@@ -25,17 +25,17 @@ if __name__ == '__main__':
                     torch.manual_seed(i)
                     np.random.seed(i)
 
-                    acc = train_naive.main("Lost", beta=beta, lamd=lamd, num_epoch=epoch, use_norm=False)
+                    acc = train_naive.main("Yahoo! News", beta=beta, lamd=lamd, num_epoch=epoch, use_norm=False)
                     accs.append(acc)
 
-                os.makedirs("exp_lost_beta/naive", exist_ok=True)
-                with open('exp_lost_beta/naive/epoch_%s_beta_%s_lambda_%s.txt' % (str(epoch), str(beta), str(lamd)), 'w') as f:
+                os.makedirs("exp_yahoo_beta/naive", exist_ok=True)
+                with open('exp_yahoo_beta/naive/epoch_%s_beta_%s_lambda_%s.txt' % (str(epoch), str(beta), str(lamd)), 'w') as f:
                     for acc in accs:
                         f.write("%s\n" % acc)
 
                 avg = np.mean(accs)
                 stdev = np.std(accs)
-                with open('exp_lost_beta/naive_records.txt', 'a') as f:
+                with open('exp_yahoo_beta/naive_records.txt', 'a') as f:
                     f.write("%s, %s, %s, %s, %s\n" % (str(epoch), str(beta), str(lamd), str(avg), str(stdev)))
 
     """
@@ -44,10 +44,10 @@ if __name__ == '__main__':
             for mu in mu_list:
                 accs = list()
                 for i in range(repeat):
-                    acc = train_proximal_cd.main("Lost", lamd=lamd, mu=mu, num_epoch=epoch, use_norm=False)
+                    acc = train_proximal_cd.main("Yahoo! News", lamd=lamd, mu=mu, num_epoch=epoch, use_norm=False)
                     accs.append(acc)
 
-                with open('exp_lost/proximal_dc/epoch_%s_lambda_%s_mu_%s.txt' % (str(epoch), str(lamd), str(mu)), 'w') as f:
+                with open('exp_yahoo/proximal_dc/epoch_%s_lambda_%s_mu_%s.txt' % (str(epoch), str(lamd), str(mu)), 'w') as f:
                     for acc in accs:
                         f.write("%s\n" % acc)
     """
