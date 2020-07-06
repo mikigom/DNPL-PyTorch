@@ -14,7 +14,7 @@ DATASET_NAME_TUPLE = ("Bird Song",
 
 
 class Datasets(Dataset):
-    def __init__(self, dataset_name, path="/home/user/Data/PartialLabel", test_fold=10, val_fold=10):
+    def __init__(self, dataset_name, path="data/", test_fold=10, val_fold=10):
         assert dataset_name in DATASET_NAME_TUPLE
 
         if dataset_name == DATASET_NAME_TUPLE[0]:
@@ -76,12 +76,16 @@ class Datasets(Dataset):
                 self.y_partial = self.y_partial[:, re_indexed]
                 self.train_fold_idx = self.train_fold_idx[re_indexed]
 
-                cardinality = self.get_cardinality_possible_partial_set()
-
         elif to == 'val':
             self.X = self.data[self.val_fold_idx]
             self.y = self.target[:, self.val_fold_idx]
             self.y_partial = self.partial_target[:, self.val_fold_idx]
+        elif to == 'trainval':
+            fold_idx = np.concatenate((self.train_fold_idx, self.val_fold_idx), axis=0)
+
+            self.X = self.data[fold_idx]
+            self.y = self.target[:, fold_idx]
+            self.y_partial = self.partial_target[:, fold_idx]
         elif to == 'test':
             self.X = self.data[self.test_fold_idx]
             self.y = self.target[:, self.test_fold_idx]
@@ -133,3 +137,11 @@ class Datasets(Dataset):
     @property
     def get_dims(self):
         return self.data.shape[1], self.target.shape[0]
+
+    @property
+    def get_feature_mean(self):
+        return np.mean(self.X, axis=0)[np.newaxis]
+
+    @property
+    def get_feature_std(self):
+        return np.std(self.X, axis=0)[np.newaxis]
