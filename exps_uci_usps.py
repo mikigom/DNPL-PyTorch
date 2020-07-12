@@ -20,7 +20,7 @@ if __name__ == '__main__':
                     torch.manual_seed(i)
                     np.random.seed(i)
 
-                    acc = train_naive_uci.main("usps", r=r, p=p, beta=0., lamd=0., use_norm=False)
+                    acc = train_naive_uci.main("usps", r=r, p=p, beta=0., lamd=0., use_norm=use_normal)
                     accs.append(acc)
 
                 os.makedirs("exp_uci_usps", exist_ok=True)
