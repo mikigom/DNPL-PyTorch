@@ -319,11 +319,12 @@ class UCI_Datasets(Dataset):
 if __name__ == '__main__':
     path = 'C:/Users/s3213/PycharmProjects/BilevelPartialLabel/data'
 
-    # load_segment(path=path)
-    # load_satimage(path=path)
-    # load_usps(path=path)
-    # load_letter(path=path)
+    print(load_segment(path=path)['data'])
+    # print(load_satimage(path=path)['data'])
+    # print(load_usps(path=path)['data'])
+    # print(load_letter(path=path)['data'].max())
 
+    """
     for dataset in DATASET_NAME_TUPLE:
         for p in (0.1, 0.2, 0.3):
             for r in (1, 2, 3):
@@ -332,4 +333,5 @@ if __name__ == '__main__':
     for dataset in DATASET_NAME_TUPLE:
         UCI_Datasets(dataset, p=1, r=1, eps=0.2, path=path)
 
+    """
     pass

@@ -50,6 +50,26 @@ class SmallModel(nn.Module):
         return self.model(x)
 
 
+class MediumModel(nn.Module):
+    def __init__(self, in_dim, out_dim, hidden=(512, 256)):
+        super(MediumModel, self).__init__()
+        if hidden is None:
+            hidden = (512,)
+
+        self.model = nn.Sequential(
+            OrderedDict([
+                ("Linear0", nn.Linear(in_dim, hidden[0])),
+                ("ReLU0", nn.ELU(inplace=True)),
+                ("Linear1", nn.Linear(hidden[0], hidden[1])),
+                ("ReLU1", nn.ELU(inplace=True)),
+                ("Linear2", nn.Linear(hidden[1], out_dim))
+            ])
+        )
+
+    def forward(self, x):
+        return self.model(x)
+
+
 class DeepModel(nn.Module):
     def __init__(self, in_dim, out_dim, hidden=(256, 512, 1024)):
         super(DeepModel, self).__init__()
