@@ -12,7 +12,7 @@ from utils import to_torch_var
 
 from yogi.yogi import Yogi
 
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 1e-4
 
 
 def main(dataset_name, r=1, p=0.2, eps=None, beta=0.01, lamd=1e-3, num_epoch=20, use_norm=False):

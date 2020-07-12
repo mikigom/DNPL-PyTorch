@@ -20,15 +20,15 @@ if __name__ == '__main__':
                     torch.manual_seed(i)
                     np.random.seed(i)
 
-                    acc = train_naive_uci.main("segment", r=r, p=p, beta=0., lamd=0., use_norm=False)
+                    acc = train_naive_uci.main("usps", r=r, p=p, beta=0., lamd=0., use_norm=False)
                     accs.append(acc)
 
-                os.makedirs("exp_uci_segment", exist_ok=True)
-                with open('exp_uci_segment/normal_%s_r_%s_p_%s.txt' % (str(use_normal), str(r), str(p)), 'w') as f:
+                os.makedirs("exp_uci_usps", exist_ok=True)
+                with open('exp_uci_usps/normal_%s_r_%s_p_%s.txt' % (str(use_normal), str(r), str(p)), 'w') as f:
                     for acc in accs:
                         f.write("%s\n" % acc)
 
                 avg = np.mean(accs)
                 stdev = np.std(accs)
-                with open('exp_uci_segment/records.txt', 'a') as f:
+                with open('exp_uci_usps/records.txt', 'a') as f:
                     f.write("%s, %s, %s, %s, %s\n" % (str(use_normal), str(r), str(p), str(avg), str(stdev)))
