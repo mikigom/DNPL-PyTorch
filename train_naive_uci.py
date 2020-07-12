@@ -32,7 +32,7 @@ def main(dataset_name, r=1, p=0.2, eps=None, beta=0.01, lamd=1e-3, num_epoch=20,
     in_dim, out_dim = datasets.get_dims
     model = MediumModel(in_dim, out_dim, hidden=(512, 256)).cuda()
 
-    opt = Yogi(model.parameters(), lr=LEARNING_RATE, weight_decay=lamd)
+    opt = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=lamd)
 
     train_data_iterator = iter(train_dataloader)
     current_iter = 0.
