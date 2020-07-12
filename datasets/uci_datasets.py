@@ -168,7 +168,7 @@ def makePartialLabel(onehot_target, r, p, eps):
         idx_list = list(range(target.shape[0]))
         selected_idxes = random.sample(idx_list, k=int(p * target.shape[0]))
         for idx in selected_idxes:
-            added_labels = random.sample(list(np.nonzero(1 - target[idx])), k=r)
+            added_labels = random.sample(np.nonzero(1 - target[idx])[0].tolist(), k=r)
             for added_label in added_labels:
                 target[idx, added_label] = 1
     else:
@@ -190,6 +190,9 @@ def makePartialLabel(onehot_target, r, p, eps):
 class UCI_Datasets(Dataset):
     def __init__(self, dataset_name, r, p, eps, path="data/", test_fold=10, val_fold=0):
         assert dataset_name in DATASET_NAME_TUPLE
+        self.r = r
+        self.p = p
+        self.eps = eps
 
         if dataset_name == DATASET_NAME_TUPLE[0]:
             dataset = load_segment(path)
@@ -226,9 +229,6 @@ class UCI_Datasets(Dataset):
 
         self.mode = 'all'
         self.set_mode('all')
-        self.r = r
-        self.p = p
-        self.eps = eps
 
     def set_mode(self, to, cardinality_constraint=None):
         if to == 'train':
@@ -317,8 +317,19 @@ class UCI_Datasets(Dataset):
 
 
 if __name__ == '__main__':
-    # load_segment(path='')
-    # load_satimage(path='')
-    # load_usps(path='')
-    # load_letter(path='')
+    path = 'C:/Users/s3213/PycharmProjects/BilevelPartialLabel/data'
+
+    # load_segment(path=path)
+    # load_satimage(path=path)
+    # load_usps(path=path)
+    # load_letter(path=path)
+
+    for dataset in DATASET_NAME_TUPLE:
+        for p in (0.1, 0.2, 0.3):
+            for r in (1, 2, 3):
+                UCI_Datasets(dataset_name=dataset, r=3, p=p, eps=None, path=path)
+
+    for dataset in DATASET_NAME_TUPLE:
+        UCI_Datasets(dataset, p=1, r=1, eps=0.2, path=path)
+
     pass
