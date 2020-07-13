@@ -5,10 +5,76 @@ import random
 from torch.utils.data import Dataset
 
 
-DATASET_NAME_TUPLE = ("segment",
+DATASET_NAME_TUPLE = ("dermatology",
+                      "vehicle",
+                      "segment",
                       "satimage",
                       "usps",
-                      "letter")
+                      "letter",
+                      "ecoli")
+
+
+def load_dermatology(path):
+    # #Example: 366
+    # #Feature: 34
+    # #Class: 6
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "dermatology.data")) as data:
+        cnt = 0
+        while line:
+            cnt += 1
+            line = data.readline()
+            if line == '':
+                break
+            line = line.split(',')
+            if line is not None:
+                if '?' in line:
+                    continue
+                y_str.append(line[-1])
+                x_str = line[:-1]
+                x_str = [float(i) for i in x_str]
+                X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    keys = list(set(y_str))
+    keyToidx = {key: i for i, key in enumerate(keys)}
+    y = [keyToidx[label_str] for label_str in y_str]
+
+    return {'data': X, 'target': y}
+
+
+def load_vehicle(path):
+    # #Example: 846
+    # #Feature: 18
+    # #Class: 4
+    X_str = []
+    y_str = []
+    for j in ('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'):
+        with open(os.path.join(path, "vehicle_xa%s.dat" % j)) as data:
+            line = True
+            cnt = 0
+            while line:
+                cnt += 1
+                line = data.readline()
+                if line == '':
+                    break
+                line = line.split(' ')
+                if '\n' in line:
+                    line.remove('\n')
+                if line is not None:
+                    y_str.append(line[-1])
+                    x_str = line[:-1]
+                    x_str = [float(i) for i in x_str]
+                    X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    keys = list(set(y_str))
+    keyToidx = {key: i for i, key in enumerate(keys)}
+    y = [keyToidx[label_str] for label_str in y_str]
+
+    return {'data': X, 'target': y}
 
 
 def load_segment(path):
@@ -152,6 +218,37 @@ def load_letter(path):
     return {'data': X, 'target': y}
 
 
+def load_ecoli(path):
+    # #Example: 366
+    # #Feature: 34
+    # #Class: 6
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "ecoli.data")) as data:
+        cnt = 0
+        while line:
+            cnt += 1
+            line = data.readline()
+            if line == '':
+                break
+            line = line.split()
+            if '\n' in line:
+                line.remove('\n')
+            if line is not None:
+                y_str.append(line[-1])
+                x_str = line[1:-1]
+                x_str = [float(i) for i in x_str]
+                X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    keys = list(set(y_str))
+    keyToidx = {key: i for i, key in enumerate(keys)}
+    y = [keyToidx[label_str] for label_str in y_str]
+
+    return {'data': X, 'target': y}
+
+
 def toOneHot(target):
     num = np.unique(target, axis=0)
     num = num.shape[0]
@@ -195,12 +292,16 @@ class UCI_Datasets(Dataset):
         self.eps = eps
 
         if dataset_name == DATASET_NAME_TUPLE[0]:
-            dataset = load_segment(path)
+            dataset = load_dermatology(path)
         elif dataset_name == DATASET_NAME_TUPLE[1]:
-            dataset = load_satimage(path)
+            dataset = load_vehicle(path)
         elif dataset_name == DATASET_NAME_TUPLE[2]:
-            dataset = load_usps(path)
+            dataset = load_segment(path)
         elif dataset_name == DATASET_NAME_TUPLE[3]:
+            dataset = load_satimage(path)
+        elif dataset_name == DATASET_NAME_TUPLE[4]:
+            dataset = load_usps(path)
+        elif dataset_name == DATASET_NAME_TUPLE[5]:
             dataset = load_letter(path)
         else:
             raise AttributeError("Dataset Name is not defined.")
@@ -319,7 +420,8 @@ class UCI_Datasets(Dataset):
 if __name__ == '__main__':
     path = 'C:/Users/s3213/PycharmProjects/BilevelPartialLabel/data'
 
-    print(load_segment(path=path)['data'])
+    print(load_ecoli(path=path)['data'].shape)
+    # print(load_segment(path=path)['data'])
     # print(load_satimage(path=path)['data'])
     # print(load_usps(path=path)['data'])
     # print(load_letter(path=path)['data'].max())
