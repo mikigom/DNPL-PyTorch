@@ -12,7 +12,7 @@ p_list = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7)
 
 
 if __name__ == '__main__':
-    for use_normal in (False, True):
+    for use_normal in (True,):
         for r in r_list:
             for p in p_list:
                 accs = list()
@@ -20,7 +20,7 @@ if __name__ == '__main__':
                     torch.manual_seed(i)
                     np.random.seed(i)
 
-                    acc = train_naive_uci.main("satimage", r=r, p=p, beta=0., lamd=0., use_norm=use_normal)
+                    acc = train_naive_uci.main("satimage", r=r, p=p, beta=1e-3, lamd=0., use_norm=use_normal)
                     accs.append(acc)
 
                 os.makedirs("exp_uci_satimage", exist_ok=True)
