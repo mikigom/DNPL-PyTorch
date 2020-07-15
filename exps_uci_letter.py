@@ -20,7 +20,7 @@ if __name__ == '__main__':
                     torch.manual_seed(i)
                     np.random.seed(i)
 
-                    acc = train_naive_uci.main("letter", r=r, p=p, beta=1e-3, lamd=0., use_norm=use_normal)
+                    acc = train_naive_uci.main("letter", r=r, p=p, beta=1e-4, lamd=0., use_norm=use_normal)
                     accs.append(acc)
 
                 os.makedirs("exp_uci_letter", exist_ok=True)
