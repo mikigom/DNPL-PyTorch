@@ -13,7 +13,7 @@ from utils import to_torch_var
 LEARNING_RATE = 3e-4
 
 
-def main(dataset_name, r=1, p=0.2, eps=None, beta=0.01, lamd=1e-3, num_epoch=20, use_norm=False):
+def main(dataset_name, r=1, p=0.2, eps=None, beta=0.01, lamd=1e-3, num_epoch=20, use_norm=False, mod_loss = True):
     datasets = UCI_Datasets(dataset_name, r=r, p=p, eps=eps, test_fold=10, val_fold=0)
 
     train_datasets = copy.deepcopy(datasets)
@@ -62,17 +62,30 @@ def main(dataset_name, r=1, p=0.2, eps=None, beta=0.01, lamd=1e-3, num_epoch=20,
 
         # Line 12
         y_f_hat = model(x)
-        s_bar = F.softmax(y_f_hat, dim=1)
-        h = -(s_bar * torch.log(s_bar + 1e-7)).sum(1)
-        h = torch.mean(h)
+        
+        if not loss_mod:
+            s_bar = F.softmax(y_f_hat, dim=1)
+            h = -(s_bar * torch.log(s_bar + 1e-7)).sum(1)
+            h = torch.mean(h)
 
-        s_bar = s_bar.view(s_bar.size(0), 1, -1)
+            s_bar = s_bar.view(s_bar.size(0), 1, -1)
 
-        dot_product = torch.bmm(s_bar, s.view(s.size(0), -1, 1))
-        dot_product = torch.clamp(dot_product, 0., 1.)
-        g = -torch.log(dot_product + 1e-7)
+            dot_product = torch.bmm(s_bar, s.view(s.size(0), -1, 1))
+            dot_product = torch.clamp(dot_product, 0., 1.)
+            g = -torch.log(dot_product + 1e-7)
 
-        L = torch.mean(g) + beta * h
+            L = torch.mean(g) + beta * h
+        else: 
+            s_bar = F.softmax(y_f_hat, dim=1)
+            ss_bar = s * s_bar            
+            dot_product = ss_bar.sum(1)
+            dot_product = torch.clamp(dot_product, 0., 1.)
+
+            ss_bar /= dot_product.view(dot_product.size(0),-1)
+            h = -(ss_bar * torch.log(ss_bar + 1e-7)).sum(1)
+            g = -torch.log(dot_product + 1e-7)
+            
+            L = torch.mean(g) + beta * h
 
         # Line 13-14
         opt.zero_grad()
