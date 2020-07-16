@@ -66,7 +66,6 @@ def main(dataset_name, r=1, p=0.2, eps=None, beta=0.01, lamd=1e-3, num_epoch=20,
         if not mod_loss:
             s_bar = F.softmax(y_f_hat, dim=1)
             h = -(s_bar * torch.log(s_bar + 1e-7)).sum(1)
-            h = torch.mean(h)
 
             s_bar = s_bar.view(s_bar.size(0), 1, -1)
 
@@ -74,7 +73,7 @@ def main(dataset_name, r=1, p=0.2, eps=None, beta=0.01, lamd=1e-3, num_epoch=20,
             dot_product = torch.clamp(dot_product, 0., 1.)
             g = -torch.log(dot_product + 1e-7)
 
-            L = torch.mean(g) + beta * h
+            L = torch.mean(g) + beta * torch.mean(h)
         else: 
             s_bar = F.softmax(y_f_hat, dim=1)
             ss_bar = s * s_bar            
@@ -85,7 +84,7 @@ def main(dataset_name, r=1, p=0.2, eps=None, beta=0.01, lamd=1e-3, num_epoch=20,
             h = -(ss_bar * torch.log(ss_bar + 1e-7)).sum(1)
             g = -torch.log(dot_product + 1e-7)
             
-            L = torch.mean(g) + beta * h
+            L = torch.mean(g) + beta * torch.mean(h)
 
         # Line 13-14
         opt.zero_grad()
