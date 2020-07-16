@@ -63,7 +63,7 @@ def main(dataset_name, r=1, p=0.2, eps=None, beta=0.01, lamd=1e-3, num_epoch=20,
         # Line 12
         y_f_hat = model(x)
         
-        if not loss_mod:
+        if not mod_loss:
             s_bar = F.softmax(y_f_hat, dim=1)
             h = -(s_bar * torch.log(s_bar + 1e-7)).sum(1)
             h = torch.mean(h)
