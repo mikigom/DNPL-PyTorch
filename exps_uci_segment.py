@@ -6,13 +6,14 @@ import torch
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-repeat = 50
+repeat = 10
 r_list = (1, 2, 3)
 p_list = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7)
+beta = 0.5
 
 
 if __name__ == '__main__':
-    for use_normal in (False,):
+    for use_normal in (True,):
         for r in r_list:
             for p in p_list:
                 accs = list()
@@ -20,7 +21,7 @@ if __name__ == '__main__':
                     torch.manual_seed(i)
                     np.random.seed(i)
 
-                    acc = train_naive_uci.main("segment", r=r, p=p, beta=1e-4, lamd=0., use_norm=use_normal)
+                    acc = train_naive_uci.main("segment", r=r, p=p, beta=beta, lamd=0., use_norm=use_normal)
                     accs.append(acc)
 
                 os.makedirs("exp_uci_segment", exist_ok=True)
@@ -30,5 +31,5 @@ if __name__ == '__main__':
 
                 avg = np.mean(accs)
                 stdev = np.std(accs)
-                with open('exp_uci_segment/records.txt', 'a') as f:
+                with open('exp_uci_segment/records.txt', 'w') as f:
                     f.write("%s, %s, %s, %s, %s\n" % (str(use_normal), str(r), str(p), str(avg), str(stdev)))

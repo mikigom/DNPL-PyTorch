@@ -303,6 +303,8 @@ class UCI_Datasets(Dataset):
             dataset = load_usps(path)
         elif dataset_name == DATASET_NAME_TUPLE[5]:
             dataset = load_letter(path)
+        elif dataset_name == DATASET_NAME_TUPLE[6]:
+            dataset = load_ecoli(path)
         else:
             raise AttributeError("Dataset Name is not defined.")
 
