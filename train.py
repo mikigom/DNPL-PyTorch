@@ -6,7 +6,6 @@ import torch.nn.functional as F
 
 from torch.utils.data import DataLoader
 
-from datasets.datasets_new import UCI_Datasets
 from models.models_new import *
 from utils import to_torch_var
 
@@ -41,7 +40,7 @@ def update_model_ema(model, ema_model, gamma, step):
         ema_param.data.mul_(gamma).add_(1. - gamma, param.data)
 
 
-def main(dataset_name, r=1, p=0.2, eps=None, beta=1., lamd=1e-3, num_epoch=25, use_norm = False, 
+def main(datasets, train_idx, test_idx, beta=1., lamd=1e-3, num_epoch=25, use_norm = False, 
         args_etc = {'mod_loss': True, 'use_mixup': False, 'alpha': 0.4, 'self_teach': False, 'gamma': 0.999, 'eta': 0.5}):
     
     mod_loss = args_etc['mod_loss']
@@ -51,14 +50,12 @@ def main(dataset_name, r=1, p=0.2, eps=None, beta=1., lamd=1e-3, num_epoch=25, u
     gamma = args_etc['gamma']
     eta = args_etc['eta']
 
-    datasets = UCI_Datasets(dataset_name, r=r, p=p, eps=eps, test_fold=10, val_fold=0)
-
     train_datasets = copy.deepcopy(datasets)
-    train_datasets.set_mode('train')
+    train_datasets.set_mode('custom', train_idx)
     train_dataloader = DataLoader(train_datasets, batch_size=32, num_workers=4, drop_last=True, shuffle=True)
 
     test_datasets = copy.deepcopy(datasets)
-    test_datasets.set_mode('test')
+    test_datasets.set_mode('custom', test_idx)
     test_dataloader = DataLoader(test_datasets, batch_size=16, num_workers=4, drop_last=False)
 
     feature_mean = torch.Tensor(train_datasets.X.mean(0)[np.newaxis]).cuda()
