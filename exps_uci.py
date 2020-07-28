@@ -1,6 +1,6 @@
 import os
 import numpy as np
-import train_naive_uci
+import train
 import torch
 import argparse
 
@@ -55,7 +55,7 @@ if __name__ == '__main__':
                 torch.manual_seed(i)
                 np.random.seed(i)
 
-                acc = train_naive_uci.main(dset_name, r=r, p=p, beta=beta, lamd=0., use_norm=use_normal)
+                acc = train.main(dset_name, r=r, p=p, beta=beta, lamd=0., use_norm=use_normal)
                 accs.append(acc)
 
             os.makedirs('exp_uci_'+dset_name, exist_ok=True)
