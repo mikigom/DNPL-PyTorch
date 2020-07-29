@@ -313,6 +313,7 @@ class UCI_Datasets(Dataset):
         self.data = dataset['data']
         # a MxQ matrix w.r.t. the candidate	labeling information, where Q is the number of possible class labels.
         self.target = toOneHot(dataset['target'])
+        self.target_partial = makePartialLabel(self.target, self.r, self.p, self.eps)
 
         self.M = self.data.shape[0]
         test_num = self.M // test_fold
@@ -333,43 +334,32 @@ class UCI_Datasets(Dataset):
         self.mode = 'all'
         self.set_mode('all')
 
-    def set_mode(self, to, custom_idx=None, cardinality_constraint=None):
+    def set_mode(self, to, custom_idx=None):
         if to == 'train':
             self.X = self.data[self.train_fold_idx]
             self.y = self.target[self.train_fold_idx]
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
-
-            if cardinality_constraint is not None:
-                cardinality = self.get_cardinality_possible_partial_set()
-                re_indexed = cardinality <= cardinality_constraint
-
-                self.X = self.X[re_indexed]
-                self.y = self.y[re_indexed]
-                self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
-                self.train_fold_idx = self.train_fold_idx[re_indexed]
-
+            self.y_partial = self.target_partial[self.train_fold_idx]
         elif to == 'val':
             self.X = self.data[self.val_fold_idx]
             self.y = self.target[self.val_fold_idx]
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
+            self.y_partial = self.target_partial[self.val_fold_idx]
         elif to == 'trainval':
             fold_idx = np.concatenate((self.train_fold_idx, self.val_fold_idx), axis=0)
-
             self.X = self.data[fold_idx]
             self.y = self.target[fold_idx]
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
+            self.y_partial = self.target_partial[fold_idx]
         elif to == 'test':
             self.X = self.data[self.test_fold_idx]
             self.y = self.target[self.test_fold_idx]
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
+            self.y_partial = self.target_partial[self.test_fold_idx]
         elif to == 'all':
             self.X = self.data
             self.y = self.target
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
+            self.y_partial = self.target_partial
         elif to == 'custom' and custom_idx is not None:
             self.X = self.data[custom_idx]
             self.y = self.target[custom_idx]
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
+            self.y_partial = self.target_partial[custom_idx]
         else:
             raise AttributeError
 

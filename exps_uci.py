@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import quantumrandom as qrng
 import train
 import torch
 import argparse
@@ -16,7 +17,8 @@ DATASET_NAME_TUPLE = ("dermatology",
 
 MODEL_NAME_TUPLE = ("medium",
                     "residual",
-                    "deep")
+                    "deep",
+                    "newdeep")
 
 
 torch.backends.cudnn.deterministic = True
@@ -25,18 +27,24 @@ torch.backends.cudnn.benchmark = False
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-dset', required=True)
-parser.add_argument('-use_normal', required=False)
+parser.add_argument('-use_norm', required=False)
 parser.add_argument('-model', required=False)
 parser.add_argument('-beta', required=False)
+parser.add_argument('-num_epoch', required=False)
 parser.add_argument('-cv_fold', required=False)
+parser.add_argument('-fix_data_seed', required=False)
+parser.add_argument('-fix_train_seed', required=False)
 
 
 args = parser.parse_args()
 dset_name = args.dset
-use_normal = True if args.use_normal == None else  args.use_normal.lower() in ('true', '1', 't', 'y')
+use_norm = True if args.use_norm == None else  args.use_norm.lower() in ('true', '1', 't', 'y')
 model_name = "medium" if args.model == None else args.model
+num_epoch = 25 if args.num_epoch == None else int(args.num_epoch)
 cv_fold = 10 if args.cv_fold == None else int(args.cv_fold)
-beta = 0.5 if args.beta == None else int(args.beta)
+beta = 0.5 if args.beta == None else float(args.beta)
+fix_data_seed = True if args.fix_data_seed == None else args.fix_data_seed.lower() in ('true', '1', 't', 'y')
+fix_train_seed = True if args.fix_train_seed == None else args.fix_train_seed.lower() in ('true', '1', 't', 'y')
 
 if not dset_name in DATASET_NAME_TUPLE:
     raise AttributeError("Dataset does not exist!")
@@ -46,38 +54,53 @@ if not model_name in MODEL_NAME_TUPLE:
 
 r_list = (1, 2, 3)
 p_list = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7)
+qrngs = iter(qrng.get_data(array_length = len(r_list) * len(p_list) * cv_fold  ))
 
 if __name__ == '__main__':
 
     os.makedirs('exp_uci_'+dset_name, exist_ok=True)
-    f1 = open('exp_uci_'+dset_name+'/records.txt','w')
+    f1 = open('exp_uci_'+dset_name+'/records.txt','a')
 
     for r in r_list:
         for p in p_list:
             accs = list()
 
-            kf = KFold(n_splits=cv_fold, shuffle=True)
-            datasets = UCI_Datasets(dset_name, r=r, p=p, eps=None)
+            if fix_data_seed:
+                kf = KFold(n_splits=cv_fold, shuffle=True, random_state=1)
+                torch.manual_seed(1)
+                np.random.seed(1)
+                datasets = UCI_Datasets(dset_name, r=r, p=p, eps=None)
+            else:
+                torch.manual_seed(next(qrngs))
+                np.random.seed(next(qrngs))
+                kf = KFold(n_splits=cv_fold, shuffle=True)
+                datasets = UCI_Datasets(dset_name, r=r, p=p, eps=None)
+
             data_num = len(datasets)
 
             for i, (train_idx, test_idx) in enumerate(kf.split(range(data_num))):
-                torch.manual_seed(i)
-                np.random.seed(i)
+               
+                if fix_train_seed:
+                    torch.manual_seed(1)
+                    np.random.seed(1)
+                else:
+                    torch.manual_seed(next(qrngs))
+                    np.random.seed(next(qrngs))
 
-                print(data_num)
-                print(train_idx)
-                print(test_idx)
-                
-                acc = train.main(datasets, train_idx, test_idx, beta=beta, lamd=0., use_norm=use_normal)
+                acc = train.main(datasets, train_idx, test_idx, beta=beta, lamd=0., use_norm=use_norm, num_epoch=num_epoch, model_name=model_name)
+                print("acc: %f, fold: %s/%s, r: %s, p: %s" % (acc, str(i+1), str(cv_fold), str(r), str(p)) )
                 accs.append(acc)
 
-            with open('exp_uci_'+dset_name+'/normal_%s_r_%s_p_%s.txt' % (str(use_normal), str(r), str(p)), 'w') as f2:
-                for acc in accs:
-                    f2.write("%s\n" % acc)
+            #with open('exp_uci_'+dset_name+'/beta_%s_model_%s_epoch_%s_norm_%s_fix_seed_%s_r_%s_p_%s.txt' 
+            #        % (str(beta), str(model_name), str(num_epoch), str(use_norm), str(fix_seed), str(r), str(p)), 'a') as f2:
+            #    for acc in accs:
+            #        f2.write("%s\n" % acc)
 
-            avg = np.mean(accs)
-            stdev = np.std(accs)
-            f1.write("%s, %s, %s, %s, %s\n" % (str(use_normal), str(r), str(p), str(avg), str(stdev)))
+            acc_avg = np.mean(accs)
+            acc_std = np.std(accs)
+            f1.write("beta: %s, model: %s, epoch: %s, use_norm: %s, fix_data_seed: %s, fix_train_seed: %s, r: %s, p: %s, acc_avg: %s, acc_std: %s, cv_fold: %s\n" 
+                    % (str(beta), str(model_name), str(num_epoch), str(use_norm), str(fix_data_seed), 
+                        str(fix_train_seed), str(r), str(p), str(acc_avg), str(acc_std), str(cv_fold)))
 
     f1.close()
 

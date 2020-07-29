@@ -40,7 +40,7 @@ def update_model_ema(model, ema_model, gamma, step):
         ema_param.data.mul_(gamma).add_(1. - gamma, param.data)
 
 
-def main(datasets, train_idx, test_idx, beta=1., lamd=1e-3, num_epoch=25, use_norm = False, 
+def main(datasets, train_idx, test_idx, beta=1., lamd=1e-3, num_epoch=25, use_norm=False, model_name='medium', 
         args_etc = {'mod_loss': True, 'use_mixup': False, 'alpha': 0.4, 'self_teach': False, 'gamma': 0.999, 'eta': 0.5}):
     
     mod_loss = args_etc['mod_loss']
@@ -62,16 +62,25 @@ def main(datasets, train_idx, test_idx, beta=1., lamd=1e-3, num_epoch=25, use_no
     feature_std = torch.Tensor(train_datasets.X.std(0)[np.newaxis]).cuda()
 
     in_dim, out_dim = datasets.get_dims
-    model = MediumModel(in_dim, out_dim, hidden = (512, 256)).cuda()
-    #model = ResModel(in_dim, out_dim, hidden = (512,)).cuda()
-    #model = DeepModel(in_dim, out_dim, hidden = (256, 512, 1024)).cuda()
-    #model = NewDeepModel(in_dim, out_dim, hidden = (128, 256, 512, 512)).cuda()
+    if model_name == 'medium':
+        model = MediumModel(in_dim, out_dim, hidden = (512, 256)).cuda()
+    elif model_name == 'residual':
+        model = ResModel(in_dim, out_dim, hidden = (512,)).cuda()
+    elif model_name == 'deep':
+        model = DeepModel(in_dim, out_dim, hidden = (256, 512, 1024)).cuda()
+    elif model_name == 'newdeep':
+        model = NewDeepModel(in_dim, out_dim, hidden = (128, 256, 512, 512)).cuda()
 
     if self_teach:
-        model_ema = MediumModel(in_dim, out_dim, hidden = (512, 256)).cuda()
-        #model_ema = ResModel(in_dim, out_dim, hidden = (512,)).cuda()
-        #model_ema = DeepModel(in_dim, out_dim, hidden = (256, 512, 1024)).cuda()
-        #model_ema = NewDeepModel(in_dim, out_dim, hidden = (128, 256, 512, 512)).cuda()
+        if model_name == 'medium':
+            model_ema = MediumModel(in_dim, out_dim, hidden = (512, 256)).cuda()
+        elif model_name == 'residual':
+            model_ema = ResModel(in_dim, out_dim, hidden = (512,)).cuda()
+        elif model_name == 'deep':
+            model_ema = DeepModel(in_dim, out_dim, hidden = (256, 512, 1024)).cuda()
+        elif model_name == 'newdeep':
+            model_ema = NewDeepModel(in_dim, out_dim, hidden = (128, 256, 512, 512)).cuda()
+
         for param in model_ema.parameters():
             param.detach_()
 
@@ -176,7 +185,7 @@ def main(datasets, train_idx, test_idx, beta=1., lamd=1e-3, num_epoch=25, use_no
     if self_teach:
         del model_ema
 
-    print("%s" % acc)
+    #print("%s" % acc)
     return acc
 
 
