@@ -314,6 +314,7 @@ class UCI_Datasets(Dataset):
         # a MxQ matrix w.r.t. the candidate	labeling information, where Q is the number of possible class labels.
         self.target = toOneHot(dataset['target'])
         self.target_partial = makePartialLabel(self.target, self.r, self.p, self.eps)
+        self.dataset_name = dataset_name
 
         self.M = self.data.shape[0]
         test_num = self.M // test_fold

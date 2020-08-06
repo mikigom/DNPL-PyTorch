@@ -5,12 +5,12 @@ from torch.utils.data import Dataset
 from scipy.io import loadmat
 
 
-DATASET_NAME_TUPLE = ("Bird Song",
-                      "FG-NET",
-                      "Lost",
-                      "MSRCv2",
-                      "Soccer Player",
-                      "Yahoo! News")
+DATASET_NAME_TUPLE = ("bird",
+                      "fgnet",
+                      "lost",
+                      "msrcv2",
+                      "soccer",
+                      "yahoo")
 
 
 class Datasets(Dataset):
@@ -41,6 +41,7 @@ class Datasets(Dataset):
         self.target = dataset['target']
         # a QxM matrix w.r.t. the ground-truth labeling	information.
         self.partial_target = dataset['partial_target']
+        self.dataset_name = dataset_name
 
         self.M = self.data.shape[0]
         test_num = self.M // test_fold
@@ -61,21 +62,11 @@ class Datasets(Dataset):
         self.mode = 'all'
         self.set_mode('all')
 
-    def set_mode(self, to, cardinality_constraint=None):
+    def set_mode(self, to, custom_idx=None, cardinality_constraint=None):
         if to == 'train':
             self.X = self.data[self.train_fold_idx]
             self.y = self.target[:, self.train_fold_idx]
             self.y_partial = self.partial_target[:, self.train_fold_idx]
-
-            if cardinality_constraint is not None:
-                cardinality = self.get_cardinality_possible_partial_set()
-                re_indexed = cardinality <= cardinality_constraint
-
-                self.X = self.X[re_indexed]
-                self.y = self.y[:, re_indexed]
-                self.y_partial = self.y_partial[:, re_indexed]
-                self.train_fold_idx = self.train_fold_idx[re_indexed]
-
         elif to == 'val':
             self.X = self.data[self.val_fold_idx]
             self.y = self.target[:, self.val_fold_idx]
@@ -94,6 +85,10 @@ class Datasets(Dataset):
             self.X = self.data
             self.y = self.target
             self.y_partial = self.partial_target
+        elif to == 'custom' and custom_idx is not None:
+            self.X = self.data[custom_idx]
+            self.y = self.target[:, custom_idx]
+            self.y_partial = self.partial_target[:, custom_idx]
         else:
             raise AttributeError
 

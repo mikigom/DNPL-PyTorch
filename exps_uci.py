@@ -1,9 +1,9 @@
 import os
 import numpy as np
-import quantumrandom as qrng
 import train
 import torch
 import argparse
+import random
 from datasets.uci_datasets_new import UCI_Datasets
 from sklearn.model_selection import KFold
 
@@ -15,11 +15,12 @@ DATASET_NAME_TUPLE = ("dermatology",
                       "letter",
                       "ecoli")
 
-MODEL_NAME_TUPLE = ("medium",
+MODEL_NAME_TUPLE = ("linear",
+                    "small",
+                    "medium",
                     "residual",
                     "deep",
                     "newdeep")
-
 
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -29,6 +30,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-dset', required=True)
 parser.add_argument('-use_norm', required=False)
 parser.add_argument('-model', required=False)
+parser.add_argument('-simp_loss', required=False)
 parser.add_argument('-beta', required=False)
 parser.add_argument('-num_epoch', required=False)
 parser.add_argument('-cv_fold', required=False)
@@ -38,13 +40,14 @@ parser.add_argument('-fix_train_seed', required=False)
 
 args = parser.parse_args()
 dset_name = args.dset
-use_norm = True if args.use_norm == None else  args.use_norm.lower() in ('true', '1', 't', 'y')
+use_norm = True if args.use_norm == None else args.use_norm.lower() in ('true', '1', 't', 'y')
 model_name = "medium" if args.model == None else args.model
+simp_loss = True if args.simp_loss == None else args.simp_loss.lower() in ('true', '1', 't', 'y')
 num_epoch = 25 if args.num_epoch == None else int(args.num_epoch)
 cv_fold = 10 if args.cv_fold == None else int(args.cv_fold)
-beta = 0.5 if args.beta == None else float(args.beta)
-fix_data_seed = True if args.fix_data_seed == None else args.fix_data_seed.lower() in ('true', '1', 't', 'y')
-fix_train_seed = True if args.fix_train_seed == None else args.fix_train_seed.lower() in ('true', '1', 't', 'y')
+beta = .5 if args.beta == None else float(args.beta)
+fix_data_seed = False if args.fix_data_seed == None else args.fix_data_seed.lower() in ('true', '1', 't', 'y')
+fix_train_seed = False if args.fix_train_seed == None else args.fix_train_seed.lower() in ('true', '1', 't', 'y')
 
 if not dset_name in DATASET_NAME_TUPLE:
     raise AttributeError("Dataset does not exist!")
@@ -54,7 +57,10 @@ if not model_name in MODEL_NAME_TUPLE:
 
 r_list = (1, 2, 3)
 p_list = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7)
-qrngs = iter(qrng.get_data(array_length = len(r_list) * len(p_list) * cv_fold  ))
+
+if not fix_data_seed or not fix_train_seed:
+    import quantumrandom as qrng
+    qrngs = iter(qrng.get_data(array_length = len(r_list)*len(p_list)*3+len(r_list)*len(p_list)*cv_fold*3))
 
 if __name__ == '__main__':
 
@@ -66,13 +72,15 @@ if __name__ == '__main__':
             accs = list()
 
             if fix_data_seed:
-                kf = KFold(n_splits=cv_fold, shuffle=True, random_state=1)
                 torch.manual_seed(1)
-                np.random.seed(1)
+                np.random.seed(2)
+                random.seed(3)
+                kf = KFold(n_splits=cv_fold, shuffle=True, random_state=4)
                 datasets = UCI_Datasets(dset_name, r=r, p=p, eps=None)
             else:
                 torch.manual_seed(next(qrngs))
                 np.random.seed(next(qrngs))
+                random.seed(next(qrngs))
                 kf = KFold(n_splits=cv_fold, shuffle=True)
                 datasets = UCI_Datasets(dset_name, r=r, p=p, eps=None)
 
@@ -81,13 +89,15 @@ if __name__ == '__main__':
             for i, (train_idx, test_idx) in enumerate(kf.split(range(data_num))):
                
                 if fix_train_seed:
-                    torch.manual_seed(1)
-                    np.random.seed(1)
+                    torch.manual_seed(i+5)
+                    np.random.seed(2*i+10)
+                    random.seed(3*i+15)
                 else:
                     torch.manual_seed(next(qrngs))
                     np.random.seed(next(qrngs))
-
-                acc = train.main(datasets, train_idx, test_idx, beta=beta, lamd=0., use_norm=use_norm, num_epoch=num_epoch, model_name=model_name)
+                    random.seed(next(qrngs))
+                
+                acc = train.main(datasets, train_idx, test_idx, bs=32, beta=beta, use_norm=use_norm, num_epoch=num_epoch, model_name=model_name, simp_loss=simp_loss)
                 print("acc: %f, fold: %s/%s, r: %s, p: %s" % (acc, str(i+1), str(cv_fold), str(r), str(p)) )
                 accs.append(acc)
 
@@ -98,9 +108,10 @@ if __name__ == '__main__':
 
             acc_avg = np.mean(accs)
             acc_std = np.std(accs)
-            f1.write("beta: %s, model: %s, epoch: %s, use_norm: %s, fix_data_seed: %s, fix_train_seed: %s, r: %s, p: %s, acc_avg: %s, acc_std: %s, cv_fold: %s\n" 
-                    % (str(beta), str(model_name), str(num_epoch), str(use_norm), str(fix_data_seed), 
+            f1.write("beta: %s, model: %s, simp_loss: %s, epoch: %s, use_norm: %s, fix_data_seed: %s, fix_train_seed: %s, r: %s, p: %s, acc_avg: %s, acc_std: %s, cv_fold: %s\n"  
+                    % (str(beta), str(model_name), str(simp_loss), str(num_epoch), str(use_norm), str(fix_data_seed), 
                         str(fix_train_seed), str(r), str(p), str(acc_avg), str(acc_std), str(cv_fold)))
+            f1.flush()
 
     f1.close()
 
