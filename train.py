@@ -277,10 +277,6 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
     is_correct = torch.cat(is_correct, dim=0)
     acc = torch.mean(is_correct.float()).detach().cpu().numpy()
 
-    del model
-    if self_teach:
-        del model_ema
-
     if datasets.dataset_name != "fgnet":
         print("%s" % acc)
         return acc
