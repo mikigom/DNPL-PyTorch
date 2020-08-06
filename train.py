@@ -55,6 +55,49 @@ def update_model_ema(model, ema_model, gamma, step):
     for ema_param, param in zip(ema_model.parameters(), model.parameters()):
         ema_param.data.mul_(gamma).add_(1. - gamma, param.data)
 
+def total_loss(model, datasets, data_idx, use_norm, simp_loss):
+
+    model.eval()
+
+    val_datasets = copy.deepcopy(datasets)
+    val_datasets.set_mode('custom', data_idx)
+    val_dataloader = DataLoader(val_datasets, batch_size=128, num_workers=4, drop_last=False)
+    val_data_iterator = iter(val_dataloader)
+    
+    g_val = 0.
+    h_val = 0.
+    current_iter = 0
+
+    while True:
+        current_iter += 1
+        try:
+            data_val, y_partial_val, _, idx_val = next(val_data_iterator)
+        except StopIteration:
+            return g_val/current_iter, h_val/current_iter
+
+        x = to_torch_var(data_val, requires_grad=False).float()
+        s = torch.DoubleTensor(y_partial_val).cuda().float()
+        if use_norm:
+            x = (x - feature_mean) / feature_std
+            x[torch.isnan(x)] = 0.
+
+        y_f_hat = model(x)
+        s_hat = F.softmax(y_f_hat, dim=1)
+        #s_hat = sharpen(s_hat, T=0.4)
+        ss_hat = s * s_hat
+        dot_product = ss_hat.sum(1)
+        dot_product = torch.clamp(dot_product, 0., 1.)
+        g = -torch.log(dot_product + 1e-10)
+        
+        if simp_loss:
+            h = -(s_hat * torch.log(s_hat + 1e-10)).sum(1)
+        else: 
+            ss_hat /= dot_product.view(dot_product.size(0),-1)
+            h = -(ss_hat * torch.log(ss_hat + 1e-10)).sum(1)
+
+        g_val += torch.mean(g).data.tolist()
+        h_val += torch.mean(h).data.tolist()
+ 
 
 def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=False, model_name='medium', simp_loss=False, 
         args_etc = {'use_mixup': False, 'alpha': 0.2, 'self_teach': False, 'gamma': 0.999, 'eta': 0.5}):
@@ -137,6 +180,7 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
         except StopIteration:
             g_val /= current_iter
             h_val /= current_iter
+            #g_val, h_val = total_loss(model, datasets, train_idx, use_norm, simp_loss)
             print("Epoch [{}], g:{:.2e}, h:{:.2e}".format(current_epoch+1, g_val, h_val))
             #if g_val <= 1e-1 and h_val <=1e-1:
             #    break
