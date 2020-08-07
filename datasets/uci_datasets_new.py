@@ -256,18 +256,26 @@ def toOneHot(target):
     return encoding
 
 
-def makePartialLabel(onehot_target, r, p, eps):
+def makePartialLabel(onehot_target, r, p, eps, binomial = False):
     if eps is not None:
         assert r == 1 and p == 1
 
     target = onehot_target.copy()
     if eps is None:
-        idx_list = list(range(target.shape[0]))
-        selected_idxes = random.sample(idx_list, k=int(p * target.shape[0]))
-        for idx in selected_idxes:
-            added_labels = random.sample(np.nonzero(1 - target[idx])[0].tolist(), k=r)
-            for added_label in added_labels:
-                target[idx, added_label] = 1
+        if binomial:
+            rs = np.random.binomial(target.shape[1]-1, p, size = target.shape[0])
+            rs[np.nonzero(rs==0)] = 1
+            for idx in range(target.shape[0]):
+                added_labels = random.sample(np.nonzero(1 - target[idx])[0].tolist(), k=rs[idx])
+                for added_label in added_labels:
+                    target[idx, added_label] = 1
+        else:
+            idx_list = list(range(target.shape[0]))
+            selected_idxes = random.sample(idx_list, k=int(p * target.shape[0]))
+            for idx in selected_idxes:
+                added_labels = random.sample(np.nonzero(1 - target[idx])[0].tolist(), k=r)
+                for added_label in added_labels:
+                    target[idx, added_label] = 1
     else:
         coupling = {}
         for label in range(onehot_target.shape[1]):
@@ -285,11 +293,12 @@ def makePartialLabel(onehot_target, r, p, eps):
 
 
 class UCI_Datasets(Dataset):
-    def __init__(self, dataset_name, r, p, eps, path="data/", test_fold=10, val_fold=0):
+    def __init__(self, dataset_name, r, p, eps, path="data/", test_fold=10, val_fold=0, binomial = False):
         assert dataset_name in DATASET_NAME_TUPLE
         self.r = r
         self.p = p
         self.eps = eps
+        self.binomial = binomial
 
         if dataset_name == DATASET_NAME_TUPLE[0]:
             dataset = load_dermatology(path)
@@ -313,7 +322,7 @@ class UCI_Datasets(Dataset):
         self.data = dataset['data']
         # a MxQ matrix w.r.t. the candidate	labeling information, where Q is the number of possible class labels.
         self.target = toOneHot(dataset['target'])
-        self.target_partial = makePartialLabel(self.target, self.r, self.p, self.eps)
+        self.target_partial = makePartialLabel(self.target, self.r, self.p, self.eps, self.binomial)
         self.dataset_name = dataset_name
 
         self.M = self.data.shape[0]
