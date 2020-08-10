@@ -11,7 +11,12 @@ DATASET_NAME_TUPLE = ("dermatology",
                       "satimage",
                       "usps",
                       "letter",
-                      "ecoli")
+                      "ecoli",
+                      "yeast",
+                      "texture",
+                      "synthcontrol",
+                      "20newsgroups",
+                      )
 
 
 def load_dermatology(path):
@@ -188,36 +193,6 @@ def load_usps(path):
 
     return {'data': X, 'target': y}
 
-
-def load_letter(path):
-    # #Example: 20,000
-    # #Feature: 16
-    # #Class: 26
-    line = True
-    X_str = []
-    y_str = []
-    with open(os.path.join(path, "letter-recognition.data")) as data:
-        cnt = 0
-        while line:
-            cnt += 1
-            line = data.readline()
-            if line == '':
-                break
-            line = line.split(',')
-            if line is not None:
-                y_str.append(line[0])
-                x_str = line[1:]
-                x_str = [float(i) for i in x_str]
-                X_str.append(x_str)
-
-    X = np.array(X_str).squeeze()
-    keys = list(set(y_str))
-    keyToidx = {key: i for i, key in enumerate(keys)}
-    y = [keyToidx[label_str] for label_str in y_str]
-
-    return {'data': X, 'target': y}
-
-
 def load_ecoli(path):
     # #Example: 366
     # #Feature: 34
@@ -249,6 +224,138 @@ def load_ecoli(path):
     return {'data': X, 'target': y}
 
 
+def load_letter(path):
+    # #Example: 20,000
+    # #Feature: 16
+    # #Class: 26
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "letter-recognition.data")) as data:
+        cnt = 0
+        while line:
+            cnt += 1
+            line = data.readline()
+            if line == '':
+                break
+            line = line.split(',')
+            if line is not None:
+                y_str.append(line[0])
+                x_str = line[1:]
+                x_str = [float(i) for i in x_str]
+                X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    keys = list(set(y_str))
+    keyToidx = {key: i for i, key in enumerate(keys)}
+    y = [keyToidx[label_str] for label_str in y_str]
+
+    return {'data': X, 'target': y}
+
+
+def load_yeast(path):
+    # #Example: 1,484
+    # #Feature: 8
+    # #Class: 10
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "yeast.data")) as data:
+        cnt = 0
+        while line:
+            cnt += 1
+            line = data.readline()
+            if line == '':
+                break
+            line = line.split()
+            if '\n' in line:
+                line.remove('\n')
+            if line is not None:
+                y_str.append(line[-1])
+                x_str = line[1:-1]
+                x_str = [float(i) for i in x_str]
+                X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    keys = list(set(y_str))
+    keyToidx = {key: i for i, key in enumerate(keys)}
+    y = [keyToidx[label_str] for label_str in y_str]
+
+    return {'data': X, 'target': y}
+
+
+def load_texture(path):
+    # #Example: 5,500
+    # #Feature: 40
+    # #Class: 11
+
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "texture.dat")) as data:
+        cnt = 0
+        while line:
+            cnt += 1
+            line = data.readline()
+            if line == '':
+                break
+            line = line.split()
+            if '\n' in line:
+                line.remove('\n')
+            if line is not None:
+                y_str.append(line[-1])
+                x_str = line[:-1]
+                x_str = [float(i) for i in x_str]
+                X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    keys = list(set(y_str))
+    keyToidx = {key: i for i, key in enumerate(keys)}
+    y = [keyToidx[label_str] for label_str in y_str]
+ 
+    return {'data': X, 'target': y}
+
+
+def load_synthcontrol(path):
+    # #Example: 600
+    # #Feature: 60
+    # #Class: 6
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "synthetic_control.data")) as data:
+        cnt = 0
+        while line:
+            cnt += 1
+            line = data.readline()
+            if line == '':
+                break
+            line = line.split()
+            if '\n' in line:
+                line.remove('\n')
+            if line is not None:
+                x_str = [float(i) for i in line]
+                X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    y = [int(i / 100) for i in range(len(X_str))]
+ 
+    return {'data': X, 'target': y}
+
+'''
+def load_20newsgroups(path):
+    # #Example: 
+    # #Feature: 
+    # #Class: 20
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "letter-recognition.data")) as data:
+    
+ 
+    return {'data': X, 'target': y}
+'''
+
 def toOneHot(target):
     num = np.unique(target, axis=0)
     num = num.shape[0]
@@ -266,7 +373,7 @@ def makePartialLabel(onehot_target, r, p, eps, binomial = False):
             rs = np.random.binomial(target.shape[1]-1, p, size = target.shape[0])
             rs[np.nonzero(rs==0)] = 1
             for idx in range(target.shape[0]):
-                added_labels = random.sample(np.nonzero(1 - target[idx])[0].tolist(), k=rs[idx])
+                added_labels = random.sample(np.nonzero(1 - target[idx])[0].tolist(), k=rs[idx]) 
                 for added_label in added_labels:
                     target[idx, added_label] = 1
         else:
@@ -314,6 +421,12 @@ class UCI_Datasets(Dataset):
             dataset = load_letter(path)
         elif dataset_name == DATASET_NAME_TUPLE[6]:
             dataset = load_ecoli(path)
+        elif dataset_name == DATASET_NAME_TUPLE[7]:
+            dataset = load_yeast(path)
+        elif dataset_name == DATASET_NAME_TUPLE[8]:
+            dataset = load_texture(path)
+        elif dataset_name == DATASET_NAME_TUPLE[9]:
+            dataset = load_synthcontrol(path)
         else:
             raise AttributeError("Dataset Name is not defined.")
 

@@ -11,22 +11,6 @@ from utils import to_torch_var
 from yogi.yogi import Yogi
 
 
-UCI_DATASET_NAMES = ("dermatology",
-                    "vehicle",
-                    "segment",
-                    "satimage",
-                    "usps",
-                    "letter",
-                    "ecoli")
-
-REAL_DATASET_NAMES = ("bird",
-                      "fgnet",
-                      "lost",
-                      "msrcv2",
-                      "soccer",
-                      "yahoo")
-
-
 def mixup(x, y, alpha):
     #indices = torch.randperm(x.size(0))
     indices = np.random.choice(x.size(0),x.size(0))
@@ -103,6 +87,7 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
         args_etc = {'use_mixup': False, 'alpha': 0.2, 'self_teach': False, 'gamma': 0.999, 'eta': 0.5}):
     
     lamd = 1e-6
+    auto_beta = True if beta < 0. else False
 
     use_mixup = args_etc['use_mixup']
     alpha = args_etc['alpha']
@@ -120,6 +105,8 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
 
     feature_mean = torch.Tensor(train_datasets.X.mean(0)[np.newaxis]).cuda()
     feature_std = torch.Tensor(train_datasets.X.std(0)[np.newaxis]).cuda()
+    inv_feature_std = 1.0 / feature_std
+    inv_feature_std[torch.isnan(inv_feature_std)] = 1.
 
     in_dim, out_dim = datasets.get_dims
     if model_name == 'linear':
@@ -154,6 +141,10 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
 
     if model_name == 'deep' or model_name == 'small':
         opt = Yogi(model.parameters(), lr=1e-3)#, weight_decay=lamd)
+    elif model_name == 'linear':
+        #opt = torch.optim.SGD(model.parameters(), lr=1e-2)# , momentum =.9)
+        #opt = torch.optim.Adam(model.parameters(), lr=1e-2)
+        opt = Yogi(model.parameters(), lr=1e-3)
     else:
         opt = torch.optim.Adam(model.parameters(), lr=3e-4)
 
@@ -164,6 +155,8 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
 
     g_val = 0.
     h_val = 0.
+    if auto_beta:
+        beta = 0.
 
     while True:
         current_iter += 1
@@ -180,8 +173,10 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
         except StopIteration:
             g_val /= current_iter
             h_val /= current_iter
+            #reg_val = reg.data.tolist()
             #g_val, h_val = total_loss(model, datasets, train_idx, use_norm, simp_loss)
             print("Epoch [{}], g:{:.2e}, h:{:.2e}".format(current_epoch+1, g_val, h_val))
+            #print("Epoch [{}], g:{:.2e}, h:{:.2e}, w:{:.2e}".format(current_epoch+1, g_val, h_val, reg_val))
             #if g_val <= 1e-1 and h_val <=1e-1:
             #    break
             train_data_iterator = iter(train_dataloader)
@@ -191,14 +186,16 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
             g_val = 0.
             h_val = 0.
 
+        if current_epoch == num_epoch // 4 and auto_beta:
+            beta = 1.
+
         if current_epoch == num_epoch:
             break
 
         x = to_torch_var(data_train, requires_grad=False).float()
         s = torch.DoubleTensor(y_partial_train).cuda().float()
         if use_norm:
-            x = (x - feature_mean) / feature_std
-            x[torch.isnan(x)] = 0.
+            x = (x - feature_mean) * inv_feature_std
         if use_mixup:
             s /= s.sum(1).view(-1,1).expand(-1, s.size(1))
             x, s, lamb, indices = mixup(x, s, alpha)
@@ -237,8 +234,7 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
         #reg = 0
         #for param in model.parameters():
         #    reg += torch.norm(param, 1)
-
-        #L += 1e-4*reg
+        #L += 0.01*reg
 
         if torch.isnan(L).any():
             print("Warning: NaN Loss")
@@ -261,8 +257,7 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
     for X, y_partial, y, idx in test_dataloader:
         x = to_torch_var(X, requires_grad=False).float()
         if use_norm:
-            x = (x - feature_mean) / feature_std
-            x[torch.isnan(x)] = 0.
+            x = (x - feature_mean) * inv_feature_std
         y = to_torch_var(y, requires_grad=False).long()
         y = torch.argmax(y, dim=1)
 
