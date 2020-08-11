@@ -1,0 +1,7 @@
+runid: 20200810180048, beta: 0.001, model: medium, simp_loss: True, epoch: 100, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.6887471, acc_std: 0.013266564, cv_fold: 10
+runid: 20200810212657, beta: 0.001, model: medium, simp_loss: True, epoch: 100, use_norm: True, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.6827891, acc_std: 0.008637516, cv_fold: 10
+runid: 20200811001142, beta: 0.001, model: medium, simp_loss: True, epoch: 200, use_norm: True, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.69022596, acc_std: 0.009791712, cv_fold: 10
+runid: 20200811142111, beta: 0.001, model: medium, simp_loss: True, epoch: 200, use_norm: True, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.68496317, acc_std: 0.01444667, cv_fold: 10
+runid: 20200811151038, beta: 0.001, model: medium, simp_loss: True, epoch: 200, use_norm: True, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.68874764, acc_std: 0.005451145, cv_fold: 10
+runid: 20200811160011, beta: 0.001, model: medium, simp_loss: True, epoch: 200, use_norm: True, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.6887913, acc_std: 0.008049796, cv_fold: 10
+runid: 20200811165007, beta: 0.001, model: medium, simp_loss: True, epoch: 200, use_norm: True, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.68709564, acc_std: 0.013946551, cv_fold: 10
