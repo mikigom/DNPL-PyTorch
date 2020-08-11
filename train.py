@@ -97,11 +97,11 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
 
     train_datasets = copy.deepcopy(datasets)
     train_datasets.set_mode('custom', train_idx)
-    train_dataloader = DataLoader(train_datasets, batch_size=bs, num_workers=4, drop_last=True, shuffle=True)
+    train_dataloader = DataLoader(train_datasets, batch_size=bs, num_workers=8, drop_last=True, shuffle=True)
 
     test_datasets = copy.deepcopy(datasets)
     test_datasets.set_mode('custom', test_idx)
-    test_dataloader = DataLoader(test_datasets, batch_size=128, num_workers=4, drop_last=False)
+    test_dataloader = DataLoader(test_datasets, batch_size=128, num_workers=8, drop_last=False)
 
     feature_mean = torch.Tensor(train_datasets.X.mean(0)[np.newaxis]).cuda()
     feature_std = torch.Tensor(train_datasets.X.std(0)[np.newaxis]).cuda()
@@ -112,29 +112,29 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
     if model_name == 'linear':
         model = LinearModel(in_dim, out_dim).cuda()
     elif model_name == 'small':
-        model = SmallModel(in_dim, out_dim, hidden = (512,)).cuda()
+        model = SmallModel(in_dim, out_dim).cuda()
     elif model_name == 'medium':
-        model = MediumModel(in_dim, out_dim, hidden = (512, 256)).cuda()
+        model = MediumModel(in_dim, out_dim).cuda()
     elif model_name == 'residual':
-        model = ResModel(in_dim, out_dim, hidden = (512,)).cuda()
+        model = ResModel(in_dim, out_dim).cuda()
     elif model_name == 'deep':
-        model = DeepModel(in_dim, out_dim, hidden = (256, 512, 1024)).cuda()
+        model = DeepModel(in_dim, out_dim).cuda()
     elif model_name == 'newdeep':
-        model = NewDeepModel(in_dim, out_dim, hidden = (128, 256, 512, 512)).cuda()
+        model = NewDeepModel(in_dim, out_dim).cuda()
 
     if self_teach:
         if model_name == 'linear':
             model_ema = LinearModel(in_dim, out_dim).cuda()
         elif model_name == 'small':
-            model_ema = SmallModel(in_dim, out_dim, hidden = (512,)).cuda()
+            model_ema = SmallModel(in_dim, out_dim).cuda()
         elif model_name == 'medium':
-            model_ema = MediumModel(in_dim, out_dim, hidden = (512, 256)).cuda()
+            model_ema = MediumModel(in_dim, out_dim).cuda()
         elif model_name == 'residual':
-            model_ema = ResModel(in_dim, out_dim, hidden = (512,)).cuda()
+            model_ema = ResModel(in_dim, out_dim).cuda()
         elif model_name == 'deep':
-            model_ema = DeepModel(in_dim, out_dim, hidden = (256, 512, 1024)).cuda()
+            model_ema = DeepModel(in_dim, out_dim).cuda()
         elif model_name == 'newdeep':
-            model_ema = NewDeepModel(in_dim, out_dim, hidden = (128, 256, 512, 512)).cuda()
+            model_ema = NewDeepModel(in_dim, out_dim).cuda()
 
         for param in model_ema.parameters():
             param.detach_()
@@ -186,7 +186,7 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
             g_val = 0.
             h_val = 0.
 
-        if current_epoch == num_epoch // 4 and auto_beta:
+        if current_epoch == num_epoch // 2 and auto_beta:
             beta = 1.
 
         if current_epoch == num_epoch:

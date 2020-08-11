@@ -39,9 +39,9 @@ parser.add_argument('-fix_train_seed', required=False)
 args = parser.parse_args()
 dset_name = args.dset
 use_norm = False if args.use_norm == None else args.use_norm.lower() in ('true', '1', 't', 'y')
-model_name = "deep" if args.model == None else args.model
+model_name = "medium" if args.model == None else args.model
 simp_loss = True if args.simp_loss == None else args.simp_loss.lower() in ('true', '1', 't', 'y')
-num_epoch = 100 if args.num_epoch == None else int(args.num_epoch)
+num_epoch = 200 if args.num_epoch == None else int(args.num_epoch)
 cv_fold = 10 if args.cv_fold == None else int(args.cv_fold)
 beta = 1e-3 if args.beta == None else float(args.beta)
 fix_data_seed = False if args.fix_data_seed == None else args.fix_data_seed.lower() in ('true', '1', 't', 'y')
