@@ -11,7 +11,12 @@ DATASET_NAME_TUPLE = ("dermatology",
                       "satimage",
                       "usps",
                       "letter",
-                      "ecoli")
+                      "ecoli",
+                      "yeast",
+                      "texture",
+                      "synthcontrol",
+                      "20newsgroups",
+                      )
 
 
 def load_dermatology(path):
@@ -188,36 +193,6 @@ def load_usps(path):
 
     return {'data': X, 'target': y}
 
-
-def load_letter(path):
-    # #Example: 20,000
-    # #Feature: 16
-    # #Class: 26
-    line = True
-    X_str = []
-    y_str = []
-    with open(os.path.join(path, "letter-recognition.data")) as data:
-        cnt = 0
-        while line:
-            cnt += 1
-            line = data.readline()
-            if line == '':
-                break
-            line = line.split(',')
-            if line is not None:
-                y_str.append(line[0])
-                x_str = line[1:]
-                x_str = [float(i) for i in x_str]
-                X_str.append(x_str)
-
-    X = np.array(X_str).squeeze()
-    keys = list(set(y_str))
-    keyToidx = {key: i for i, key in enumerate(keys)}
-    y = [keyToidx[label_str] for label_str in y_str]
-
-    return {'data': X, 'target': y}
-
-
 def load_ecoli(path):
     # #Example: 366
     # #Feature: 34
@@ -249,6 +224,138 @@ def load_ecoli(path):
     return {'data': X, 'target': y}
 
 
+def load_letter(path):
+    # #Example: 20,000
+    # #Feature: 16
+    # #Class: 26
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "letter-recognition.data")) as data:
+        cnt = 0
+        while line:
+            cnt += 1
+            line = data.readline()
+            if line == '':
+                break
+            line = line.split(',')
+            if line is not None:
+                y_str.append(line[0])
+                x_str = line[1:]
+                x_str = [float(i) for i in x_str]
+                X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    keys = list(set(y_str))
+    keyToidx = {key: i for i, key in enumerate(keys)}
+    y = [keyToidx[label_str] for label_str in y_str]
+
+    return {'data': X, 'target': y}
+
+
+def load_yeast(path):
+    # #Example: 1,484
+    # #Feature: 8
+    # #Class: 10
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "yeast.data")) as data:
+        cnt = 0
+        while line:
+            cnt += 1
+            line = data.readline()
+            if line == '':
+                break
+            line = line.split()
+            if '\n' in line:
+                line.remove('\n')
+            if line is not None:
+                y_str.append(line[-1])
+                x_str = line[1:-1]
+                x_str = [float(i) for i in x_str]
+                X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    keys = list(set(y_str))
+    keyToidx = {key: i for i, key in enumerate(keys)}
+    y = [keyToidx[label_str] for label_str in y_str]
+
+    return {'data': X, 'target': y}
+
+
+def load_texture(path):
+    # #Example: 5,500
+    # #Feature: 40
+    # #Class: 11
+
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "texture.dat")) as data:
+        cnt = 0
+        while line:
+            cnt += 1
+            line = data.readline()
+            if line == '':
+                break
+            line = line.split()
+            if '\n' in line:
+                line.remove('\n')
+            if line is not None:
+                y_str.append(line[-1])
+                x_str = line[:-1]
+                x_str = [float(i) for i in x_str]
+                X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    keys = list(set(y_str))
+    keyToidx = {key: i for i, key in enumerate(keys)}
+    y = [keyToidx[label_str] for label_str in y_str]
+ 
+    return {'data': X, 'target': y}
+
+
+def load_synthcontrol(path):
+    # #Example: 600
+    # #Feature: 60
+    # #Class: 6
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "synthetic_control.data")) as data:
+        cnt = 0
+        while line:
+            cnt += 1
+            line = data.readline()
+            if line == '':
+                break
+            line = line.split()
+            if '\n' in line:
+                line.remove('\n')
+            if line is not None:
+                x_str = [float(i) for i in line]
+                X_str.append(x_str)
+
+    X = np.array(X_str).squeeze()
+    y = [int(i / 100) for i in range(len(X_str))]
+ 
+    return {'data': X, 'target': y}
+
+'''
+def load_20newsgroups(path):
+    # #Example: 
+    # #Feature: 
+    # #Class: 20
+    line = True
+    X_str = []
+    y_str = []
+    with open(os.path.join(path, "letter-recognition.data")) as data:
+    
+ 
+    return {'data': X, 'target': y}
+'''
+
 def toOneHot(target):
     num = np.unique(target, axis=0)
     num = num.shape[0]
@@ -256,18 +363,26 @@ def toOneHot(target):
     return encoding
 
 
-def makePartialLabel(onehot_target, r, p, eps):
+def makePartialLabel(onehot_target, r, p, eps, binomial = False):
     if eps is not None:
         assert r == 1 and p == 1
 
     target = onehot_target.copy()
     if eps is None:
-        idx_list = list(range(target.shape[0]))
-        selected_idxes = random.sample(idx_list, k=int(p * target.shape[0]))
-        for idx in selected_idxes:
-            added_labels = random.sample(np.nonzero(1 - target[idx])[0].tolist(), k=r)
-            for added_label in added_labels:
-                target[idx, added_label] = 1
+        if binomial:
+            rs = np.random.binomial(target.shape[1]-1, p, size = target.shape[0])
+            rs[np.nonzero(rs==0)] = 1
+            for idx in range(target.shape[0]):
+                added_labels = random.sample(np.nonzero(1 - target[idx])[0].tolist(), k=rs[idx]) 
+                for added_label in added_labels:
+                    target[idx, added_label] = 1
+        else:
+            idx_list = list(range(target.shape[0]))
+            selected_idxes = random.sample(idx_list, k=int(p * target.shape[0]))
+            for idx in selected_idxes:
+                added_labels = random.sample(np.nonzero(1 - target[idx])[0].tolist(), k=r)
+                for added_label in added_labels:
+                    target[idx, added_label] = 1
     else:
         coupling = {}
         for label in range(onehot_target.shape[1]):
@@ -285,11 +400,12 @@ def makePartialLabel(onehot_target, r, p, eps):
 
 
 class UCI_Datasets(Dataset):
-    def __init__(self, dataset_name, r, p, eps, path="data/", test_fold=10, val_fold=0):
+    def __init__(self, dataset_name, r, p, eps, path="data/", test_fold=10, val_fold=0, binomial = False):
         assert dataset_name in DATASET_NAME_TUPLE
         self.r = r
         self.p = p
         self.eps = eps
+        self.binomial = binomial
 
         if dataset_name == DATASET_NAME_TUPLE[0]:
             dataset = load_dermatology(path)
@@ -305,6 +421,12 @@ class UCI_Datasets(Dataset):
             dataset = load_letter(path)
         elif dataset_name == DATASET_NAME_TUPLE[6]:
             dataset = load_ecoli(path)
+        elif dataset_name == DATASET_NAME_TUPLE[7]:
+            dataset = load_yeast(path)
+        elif dataset_name == DATASET_NAME_TUPLE[8]:
+            dataset = load_texture(path)
+        elif dataset_name == DATASET_NAME_TUPLE[9]:
+            dataset = load_synthcontrol(path)
         else:
             raise AttributeError("Dataset Name is not defined.")
 
@@ -313,6 +435,20 @@ class UCI_Datasets(Dataset):
         self.data = dataset['data']
         # a MxQ matrix w.r.t. the candidate	labeling information, where Q is the number of possible class labels.
         self.target = toOneHot(dataset['target'])
+        self.target_partial = makePartialLabel(self.target, self.r, self.p, self.eps, self.binomial)
+        self.dataset_name = dataset_name
+
+        toarray_op = getattr(self.target, "toarray", None)
+        if callable(toarray_op):
+            self.target = self.target[idx].toarray().squeeze().astype(np.float64)
+        else:
+            self.target = self.target[idx].squeeze().astype(np.float64)
+
+        toarray_op = getattr(self.target_partial, "toarray", None)
+        if callable(toarray_op):
+            self.target_partial = self.target_partial[idx].toarray().squeeze().astype(np.float64)
+        else:
+            self.target_partial = self.target_partial[idx].squeeze().astype(np.float64)
 
         self.M = self.data.shape[0]
         test_num = self.M // test_fold
@@ -333,45 +469,41 @@ class UCI_Datasets(Dataset):
         self.mode = 'all'
         self.set_mode('all')
 
-    def set_mode(self, to, cardinality_constraint=None):
+    def set_mode(self, to, custom_idx=None):
         if to == 'train':
             self.X = self.data[self.train_fold_idx]
             self.y = self.target[self.train_fold_idx]
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
-
-            if cardinality_constraint is not None:
-                cardinality = self.get_cardinality_possible_partial_set()
-                re_indexed = cardinality <= cardinality_constraint
-
-                self.X = self.X[re_indexed]
-                self.y = self.y[re_indexed]
-                self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
-                self.train_fold_idx = self.train_fold_idx[re_indexed]
-
+            self.y_partial = self.target_partial[self.train_fold_idx]
         elif to == 'val':
             self.X = self.data[self.val_fold_idx]
             self.y = self.target[self.val_fold_idx]
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
+            self.y_partial = self.target_partial[self.val_fold_idx]
         elif to == 'trainval':
             fold_idx = np.concatenate((self.train_fold_idx, self.val_fold_idx), axis=0)
-
             self.X = self.data[fold_idx]
             self.y = self.target[fold_idx]
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
+            self.y_partial = self.target_partial[fold_idx]
         elif to == 'test':
             self.X = self.data[self.test_fold_idx]
             self.y = self.target[self.test_fold_idx]
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
+            self.y_partial = self.target_partial[self.test_fold_idx]
         elif to == 'all':
             self.X = self.data
             self.y = self.target
-            self.y_partial = makePartialLabel(self.y, self.r, self.p, self.eps)
+            self.y_partial = self.target_partial
+        elif to == 'custom' and custom_idx is not None:
+            self.X = self.data[custom_idx]
+            self.y = self.target[custom_idx]
+            self.y_partial = self.target_partial[custom_idx]
         else:
             raise AttributeError
 
     def __getitem__(self, idx):
+    
         X = self.X[idx]
-
+        y_partial = self.y_partial[idx]
+        y = self.y[idx]
+        '''
         toarray_op = getattr(self.y, "toarray", None)
         if callable(toarray_op):
             y = self.y[idx].toarray().squeeze().astype(np.float64)
@@ -384,6 +516,7 @@ class UCI_Datasets(Dataset):
         else:
             y_partial = self.y_partial[idx].squeeze().astype(np.float64)
         # y_partial = self.y_partial[:, idx].toarray().squeeze()
+        '''
         return X, y_partial, y, idx
 
     def __len__(self):
@@ -419,23 +552,3 @@ class UCI_Datasets(Dataset):
         return np.std(self.X, axis=0)[np.newaxis]
 
 
-if __name__ == '__main__':
-    path = 'C:/Users/s3213/PycharmProjects/BilevelPartialLabel/data'
-
-    print(load_ecoli(path=path)['data'].shape)
-    # print(load_segment(path=path)['data'])
-    # print(load_satimage(path=path)['data'])
-    # print(load_usps(path=path)['data'])
-    # print(load_letter(path=path)['data'].max())
-
-    """
-    for dataset in DATASET_NAME_TUPLE:
-        for p in (0.1, 0.2, 0.3):
-            for r in (1, 2, 3):
-                UCI_Datasets(dataset_name=dataset, r=3, p=p, eps=None, path=path)
-
-    for dataset in DATASET_NAME_TUPLE:
-        UCI_Datasets(dataset, p=1, r=1, eps=0.2, path=path)
-
-    """
-    pass

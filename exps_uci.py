@@ -4,7 +4,7 @@ import train
 import torch
 import argparse
 import random
-from datasets.uci_datasets_new import UCI_Datasets
+from datasets.uci_datasets import UCI_Datasets
 from sklearn.model_selection import KFold
 
 DATASET_NAME_TUPLE = ("dermatology",

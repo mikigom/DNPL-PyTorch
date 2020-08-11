@@ -3,7 +3,7 @@ import numpy as np
 import train
 import torch
 import argparse, random, pickle
-from datasets.datasets_new import Datasets
+from datasets.datasets import Datasets
 from sklearn.model_selection import KFold
 from datetime import datetime
 
@@ -49,6 +49,9 @@ fix_train_seed = False if args.fix_train_seed == None else args.fix_train_seed.l
 
 if not dset_name in DATASET_NAME_TUPLE:
     raise AttributeError("Dataset does not exist!")
+
+if dset_name in ("bird","yahoo"):
+    use_norm = True
 
 if not model_name in MODEL_NAME_TUPLE:
     raise AttributeError("Model does not exist!")

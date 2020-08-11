@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from torch.utils.data import DataLoader
 
-from models.models_new import *
+from models.models import *
 from utils import to_torch_var
 from yogi.yogi import Yogi
 
