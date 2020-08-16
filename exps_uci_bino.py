@@ -2,7 +2,7 @@ import os
 import numpy as np
 import train
 import torch
-import argparse, random, pickle
+import argparse, random, pickle, copy
 from datasets.uci_datasets import UCI_Datasets
 from sklearn.model_selection import KFold
 from datetime import datetime
@@ -65,20 +65,20 @@ if __name__ == '__main__':
     f = open('exp_uci_bino_'+dset_name+'/records.txt','a')
 
     for p in p_list:
-        accs = list()
+        accs = []
 
         if fix_data_seed:
             torch.manual_seed(1)
             np.random.seed(2)
             random.seed(3)
             kf = KFold(n_splits=cv_fold, shuffle=True, random_state=4)
-            datasets = UCI_Datasets(dset_name, r=0, p=p, eps=None, binomial=True)
+            datasets = UCI_Datasets(dset_name, r=None, p=p, eps=None, binomial=True)
         else:
             torch.manual_seed(next(qrngs))
             np.random.seed(next(qrngs))
             random.seed(next(qrngs))
             kf = KFold(n_splits=cv_fold, shuffle=True)
-            datasets = UCI_Datasets(dset_name, r=0, p=p, eps=None, binomial=True)
+            datasets = UCI_Datasets(dset_name, r=None, p=p, eps=None, binomial=True)
 
         data_num = len(datasets)
         runid = str(datetime.now().strftime('%Y%m%d%H%M%S'))
@@ -93,8 +93,14 @@ if __name__ == '__main__':
                 torch.manual_seed(next(qrngs))
                 np.random.seed(next(qrngs))
                 random.seed(next(qrngs))
-                
-            acc = train.main(datasets, train_idx, test_idx, bs=128, beta=beta, use_norm=use_norm, num_epoch=num_epoch, model_name=model_name, simp_loss=simp_loss)
+
+            train_datasets = copy.deepcopy(datasets)
+            train_datasets.set_mode('custom', train_idx)
+
+            test_datasets = copy.deepcopy(datasets)
+            test_datasets.set_mode('custom', test_idx)
+             
+            acc = train.main(train_datasets, test_datasets, bs=128, beta=beta, use_norm=use_norm, num_epoch=num_epoch, model_name=model_name, simp_loss=simp_loss)
             print("acc: %f, fold: %s/%s, p: %s" % (acc, str(i+1), str(cv_fold), str(p)) )
             accs.append(acc)
 

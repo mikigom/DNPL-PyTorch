@@ -130,3 +130,40 @@ class NewDeepModel(nn.Module):
 
     def forward(self, x):
         return self.model(x)
+
+class ConvNet(nn.Module):
+    def __init__(self, in_chan, out_dim):
+        super(ConvNet, self).__init__()
+
+        self.conv = nn.Sequential(
+            OrderedDict([
+                ("Conv1a", nn.Conv2d(in_chan, 128, 3, padding=1)),
+                ("ReLU1a", nn.LeakyReLU(inplace=True)),
+                ("Conv1b", nn.Conv2d(128, 128, 3, padding=1)),
+                ("ReLU1b", nn.LeakyReLU(inplace=True)),
+                ("Conv1c", nn.Conv2d(128, 128, 3, padding=1)),
+                ("ReLU1c", nn.LeakyReLU(inplace=True)),
+                ("MaxPool1", nn.MaxPool2d(2)),
+                ("Conv2a", nn.Conv2d(128, 256, 3, padding=1)),
+                ("ReLU2a", nn.LeakyReLU(inplace=True)),
+                ("Conv2b", nn.Conv2d(256, 256, 3, padding=1)),
+                ("ReLU2b", nn.LeakyReLU(inplace=True)),
+                ("Conv2c", nn.Conv2d(256, 256, 3, padding=1)),
+                ("ReLU2c", nn.LeakyReLU(inplace=True)),
+                ("MaxPool2", nn.MaxPool2d(2)),
+                ("Conv3a", nn.Conv2d(256, 512, 3, padding=0)),
+                ("ReLU3a", nn.ELU(inplace=True)),
+                ("Conv3b", nn.Conv2d(512, 256, 1)),
+                ("ReLU3b", nn.LeakyReLU(inplace=True)),
+                ("Conv3c", nn.Conv2d(256, 128, 1)),
+                ("ReLU3c", nn.LeakyReLU(inplace=True) ),
+                ("GlobalAvgPool", nn.AvgPool2d(6)),
+            ])
+        )
+
+        self.linear = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = torch.squeeze(x)
+        return self.linear(x)

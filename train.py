@@ -39,6 +39,7 @@ def update_model_ema(model, ema_model, gamma, step):
     for ema_param, param in zip(ema_model.parameters(), model.parameters()):
         ema_param.data.mul_(gamma).add_(1. - gamma, param.data)
 
+
 def total_loss(model, datasets, data_idx, use_norm, simp_loss):
 
     model.eval()
@@ -83,7 +84,7 @@ def total_loss(model, datasets, data_idx, use_norm, simp_loss):
         h_val += torch.mean(h).data.tolist()
  
 
-def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=False, model_name='medium', simp_loss=False, 
+def main(train_datasets, test_datasets, bs, beta=1., num_epoch=25, use_norm=False, model_name='medium', simp_loss=False, 
         args_etc = {'use_mixup': False, 'alpha': 0.2, 'self_teach': False, 'gamma': 0.999, 'eta': 0.5}):
     
     lamd = 1e-6
@@ -95,20 +96,23 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
     gamma = args_etc['gamma']
     eta = args_etc['eta']
 
-    train_datasets = copy.deepcopy(datasets)
-    train_datasets.set_mode('custom', train_idx)
+    assert train_datasets.dataset_name == test_datasets.dataset_name
+
+    #train_datasets = copy.deepcopy(datasets)
+    #train_datasets.set_mode('custom', train_idx)
     train_dataloader = DataLoader(train_datasets, batch_size=bs, num_workers=8, drop_last=True, shuffle=True)
 
-    test_datasets = copy.deepcopy(datasets)
-    test_datasets.set_mode('custom', test_idx)
-    test_dataloader = DataLoader(test_datasets, batch_size=128, num_workers=8, drop_last=False)
+    #test_datasets = copy.deepcopy(datasets)
+    #test_datasets.set_mode('custom', test_idx)
+    test_dataloader = DataLoader(test_datasets, batch_size=bs, num_workers=8, drop_last=False)
 
-    feature_mean = torch.Tensor(train_datasets.X.mean(0)[np.newaxis]).cuda()
-    feature_std = torch.Tensor(train_datasets.X.std(0)[np.newaxis]).cuda()
-    inv_feature_std = 1.0 / feature_std
-    inv_feature_std[torch.isnan(inv_feature_std)] = 1.
+    if use_norm:
+        feature_mean = torch.Tensor(train_datasets.X.mean(0)[np.newaxis]).cuda()
+        feature_std = torch.Tensor(train_datasets.X.std(0)[np.newaxis]).cuda()
+        inv_feature_std = 1.0 / feature_std
+        inv_feature_std[torch.isnan(inv_feature_std)] = 1.
 
-    in_dim, out_dim = datasets.get_dims
+    in_dim, out_dim = train_datasets.get_dims
     if model_name == 'linear':
         model = LinearModel(in_dim, out_dim).cuda()
     elif model_name == 'small':
@@ -121,6 +125,8 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
         model = DeepModel(in_dim, out_dim).cuda()
     elif model_name == 'newdeep':
         model = NewDeepModel(in_dim, out_dim).cuda()
+    elif model_name == 'convnet':
+        model = ConvNet(in_dim, out_dim).cuda()
 
     if self_teach:
         if model_name == 'linear':
@@ -135,18 +141,13 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
             model_ema = DeepModel(in_dim, out_dim).cuda()
         elif model_name == 'newdeep':
             model_ema = NewDeepModel(in_dim, out_dim).cuda()
+        elif model_name == 'convnet':
+            model_ema = ConvNet(in_dim, out_dim).cuda()
 
         for param in model_ema.parameters():
             param.detach_()
 
-    if model_name == 'deep' or model_name == 'small':
-        opt = Yogi(model.parameters(), lr=1e-3)#, weight_decay=lamd)
-    elif model_name == 'linear':
-        #opt = torch.optim.SGD(model.parameters(), lr=1e-2)# , momentum =.9)
-        #opt = torch.optim.Adam(model.parameters(), lr=1e-2)
-        opt = Yogi(model.parameters(), lr=1e-3)
-    else:
-        opt = torch.optim.Adam(model.parameters(), lr=3e-4)
+    opt = Yogi(model.parameters(), lr=1e-3)
 
     train_data_iterator = iter(train_dataloader)
     current_iter = 0
@@ -171,20 +172,39 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
         try:
             data_train, y_partial_train, _, idx_train = next(train_data_iterator)
         except StopIteration:
+
+            model.eval()
+
+            is_correct = []
+            for X, y_partial, y, idx in test_dataloader:
+                x = to_torch_var(X, requires_grad=False).float()
+                if use_norm:
+                    x = (x - feature_mean) * inv_feature_std
+                y = to_torch_var(y, requires_grad=False).long()
+                y = torch.argmax(y, dim=1)
+
+                s_bar = model(x)
+                y_bar = torch.softmax(s_bar, dim=1)
+                y_bar = torch.argmax(y_bar, dim=1)
+                is_correct.append(y_bar == y)
+
+            is_correct = torch.cat(is_correct, dim=0)
+            acc = torch.mean(is_correct.float()).detach().cpu().numpy()
+
             g_val /= current_iter
             h_val /= current_iter
             #reg_val = reg.data.tolist()
             #g_val, h_val = total_loss(model, datasets, train_idx, use_norm, simp_loss)
-            print("Epoch [{}], g:{:.2e}, h:{:.2e}".format(current_epoch+1, g_val, h_val))
+            print("Epoch [{}], g:{:.2e}, h:{:.2e}, acc:{:.2e}".format(current_epoch+1, g_val, h_val, acc))
             #print("Epoch [{}], g:{:.2e}, h:{:.2e}, w:{:.2e}".format(current_epoch+1, g_val, h_val, reg_val))
-            #if g_val <= 1e-1 and h_val <=1e-1:
-            #    break
             train_data_iterator = iter(train_dataloader)
             data_train, y_partial_train, _, idx_train = next(train_data_iterator)
             current_epoch += 1
             current_iter = 0
             g_val = 0.
             h_val = 0.
+
+            model.train()
 
         if current_epoch == num_epoch // 2 and auto_beta:
             beta = 1.
@@ -251,7 +271,7 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
     model.eval()
 
     is_correct = []
-    if datasets.dataset_name == "fgnet":
+    if train_datasets.dataset_name == "fgnet":
         is_mae3 = []
         is_mae5 = []
     for X, y_partial, y, idx in test_dataloader:
@@ -265,14 +285,14 @@ def main(datasets, train_idx, test_idx, bs, beta=1., num_epoch=25, use_norm=Fals
         y_bar = torch.softmax(s_bar, dim=1)
         y_bar = torch.argmax(y_bar, dim=1)
         is_correct.append(y_bar == y)
-        if datasets.dataset_name == "fgnet":
+        if train_datasets.dataset_name == "fgnet":
             is_mae3.append(torch.abs(y_bar - y) <= 3)
             is_mae5.append(torch.abs(y_bar - y) <= 5)
 
     is_correct = torch.cat(is_correct, dim=0)
     acc = torch.mean(is_correct.float()).detach().cpu().numpy()
 
-    if datasets.dataset_name != "fgnet":
+    if train_datasets.dataset_name != "fgnet":
         print("%s" % acc)
         return acc
     else:

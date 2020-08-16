@@ -440,15 +440,15 @@ class UCI_Datasets(Dataset):
 
         toarray_op = getattr(self.target, "toarray", None)
         if callable(toarray_op):
-            self.target = self.target[idx].toarray().squeeze().astype(np.float64)
+            self.target = self.target.toarray().squeeze().astype(np.float64)
         else:
-            self.target = self.target[idx].squeeze().astype(np.float64)
+            self.target = self.target.squeeze().astype(np.float64)
 
         toarray_op = getattr(self.target_partial, "toarray", None)
         if callable(toarray_op):
-            self.target_partial = self.target_partial[idx].toarray().squeeze().astype(np.float64)
+            self.target_partial = self.target_partial.toarray().squeeze().astype(np.float64)
         else:
-            self.target_partial = self.target_partial[idx].squeeze().astype(np.float64)
+            self.target_partial = self.target_partial.squeeze().astype(np.float64)
 
         self.M = self.data.shape[0]
         test_num = self.M // test_fold
