@@ -53,7 +53,7 @@ if not dset_name in DATASET_NAME_TUPLE:
 if not model_name in MODEL_NAME_TUPLE:
     raise AttributeError("Model does not exist!")
 
-p_list = (.1,.7)
+p_list = (.7,.1)
 
 if not fix_data_seed or not fix_train_seed:
     import quantumrandom as qrng
