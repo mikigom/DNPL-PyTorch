@@ -1,6 +1,10 @@
-runid: 20200810174658, beta: 0.001, model: medium, simp_loss: True, epoch: 100, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.5562857, acc_std: 0.036068212, cv_fold: 10
 runid: 20200810235642, beta: 0.001, model: medium, simp_loss: True, epoch: 200, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.55742204, acc_std: 0.03660019, cv_fold: 10
 runid: 20200811105029, beta: 0.001, model: medium, simp_loss: True, epoch: 200, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.5392208, acc_std: 0.038459323, cv_fold: 10
 runid: 20200811110313, beta: 0.001, model: medium, simp_loss: True, epoch: 200, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.56600326, acc_std: 0.027790932, cv_fold: 10
 runid: 20200811111613, beta: 0.001, model: medium, simp_loss: True, epoch: 200, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.55120784, acc_std: 0.02858764, cv_fold: 10
 runid: 20200811112850, beta: 0.001, model: medium, simp_loss: True, epoch: 200, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.55061364, acc_std: 0.033190854, cv_fold: 10
+runid: 20200821075122, beta: 0.001, model: medium, simp_loss: True, epoch: 100, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.5232922, acc_std: 0.024408307, cv_fold: 10
+runid: 20200821075822, beta: 0.001, model: medium, simp_loss: True, epoch: 100, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.5357987, acc_std: 0.029607333, cv_fold: 10
+runid: 20200821080517, beta: 0.001, model: medium, simp_loss: True, epoch: 100, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.53587335, acc_std: 0.03630651, cv_fold: 10
+runid: 20200821081206, beta: 0.001, model: medium, simp_loss: True, epoch: 100, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.53808445, acc_std: 0.036289584, cv_fold: 10
+runid: 20200821081901, beta: 0.001, model: medium, simp_loss: True, epoch: 100, use_norm: False, fix_data_seed: False, fix_train_seed: False, acc_avg: 0.55517536, acc_std: 0.029613828, cv_fold: 10
