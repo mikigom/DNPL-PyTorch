@@ -133,6 +133,7 @@ class NewDeepModel(nn.Module):
     def forward(self, x):
         return self.model(x)
 
+
 class ConvNet(nn.Module):
     def __init__(self, in_chan, out_dim):
         super(ConvNet, self).__init__()

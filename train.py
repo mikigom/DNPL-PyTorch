@@ -1,7 +1,7 @@
 import copy
 
 import numpy as np
-import torch, copy
+import torch
 import torch.nn.functional as F
 
 from torch.utils.data import DataLoader
@@ -40,8 +40,69 @@ def update_model_ema(model, ema_model, gamma, step):
         ema_param.data.mul_(gamma).add_(1. - gamma, param.data)
 
 
+def loss_monitor(model, datasets, norm_params=None):
+
+    datasets_copy = copy.deepcopy(datasets)
+    model_copy = copy.deepcopy(model)
+    dataloader = DataLoader(datasets_copy, batch_size=min((256, len(datasets_copy))),
+        num_workers=4, drop_last=False)
+    data_iterator = iter(dataloader)
+    
+    model_copy.eval()
+
+    surrogate_risk_val = 0.
+    partial_risk_val = 0.
+    zeroone_risk_val = 0.
+
+    current_iter = 0
+
+    is_correct = []
+    for data, y_partial, y, idx in data_iterator:
+        current_iter += 1
+        
+        x = to_torch_var(data, requires_grad=False).float()
+        s = torch.DoubleTensor(y_partial).cuda().float()
+        y = to_torch_var(y, requires_grad=False).long()
+        y = torch.argmax(y, dim=1)
+
+        if norm_params is not None:
+            feature_mean = norm_params[0]
+            inv_feature_std = norm_params[1]
+            x = (x - feature_mean) * inv_feature_std
+        
+        s_hat = model_copy(x)
+        s_hat = F.softmax(s_hat, dim=1)
+        #s_hat = sharpen(s_hat, .1)
+        ss_hat = s * s_hat
+        ss_hat_dp = ss_hat.sum(1)
+        ss_hat_dp = torch.clamp(ss_hat_dp, 0., 1.)
+        l = -torch.log(ss_hat_dp + 1e-10)
+        surrogate_risk_val += torch.mean(l).data.tolist()
+
+        y_hat = sharpen(s_hat, .1)
+        sy_hat = s * y_hat
+        sy_hat_dp = sy_hat.sum(1)
+        sy_hat_dp = torch.clamp(sy_hat_dp, 0., 1.)
+        partial_risk_val += torch.mean(sy_hat_dp).data.tolist()
+
+        y_hat = torch.argmax(s_hat, dim=1)
+        is_correct.append(y_hat == y)
+
+    surrogate_risk_val /= current_iter 
+    partial_risk_val /= current_iter
+    is_correct = torch.cat(is_correct, dim=0)
+    zeroone_risk_val = torch.mean(is_correct.float()).detach().cpu().numpy()
+
+    del model_copy
+    del datasets_copy
+
+    return surrogate_risk_val, partial_risk_val, zeroone_risk_val
+
+
 def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=False, model_name='medium', simp_loss=True, 
         args_etc = {'use_mixup': False, 'alpha': 0.2, 'self_teach': False, 'gamma': 0.999, 'eta': 0.5}):
+    
+    monitor = False
     
     auto_beta = True if beta < 0. else False
     use_mixup = args_etc['use_mixup']
@@ -54,11 +115,13 @@ def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=Fal
 
     #train_datasets = copy.deepcopy(datasets)
     #train_datasets.set_mode('custom', train_idx)
-    train_dataloader = DataLoader(train_datasets, batch_size=bs, num_workers=4, drop_last=True, shuffle=True)
+    train_dataloader = DataLoader(train_datasets, batch_size=min((bs, len(train_datasets))),
+            num_workers=4, drop_last=True, shuffle=True)
 
     #test_datasets = copy.deepcopy(datasets)
     #test_datasets.set_mode('custom', test_idx)
-    test_dataloader = DataLoader(test_datasets, batch_size=bs, num_workers=4, drop_last=False)
+    test_dataloader = DataLoader(test_datasets, batch_size=min((256, len(test_datasets))),
+            num_workers=4, drop_last=False)
 
     if use_norm:
         feature_mean = torch.Tensor(train_datasets.X.mean(0)[np.newaxis]).cuda()
@@ -89,16 +152,16 @@ def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=Fal
             param.detach_()
 
     opt = Yogi(model.parameters(), lr=1e-3)
-    #opt = torch.optim.Adam(model.parameters(), lr=3e-4)
+    #opt = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
+    #opt = torch.optim.Adam(model.parameters(), lr=1e-3)
 
     train_data_iterator = iter(train_dataloader)
     current_iter = 0
     total_iter = 0
     current_epoch = 0
 
-    g_val = 0.
+    l_val = 0.
     h_val = 0.
-    r_val = 0.
     if auto_beta:
         beta = 0.
 
@@ -115,11 +178,10 @@ def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=Fal
         try:
             data_train, y_partial_train, _, idx_train = next(train_data_iterator)
         except StopIteration:
-
+            '''
             model.eval()
 
             is_correct = []
-            sy_hat_dp_vals = []
             for X, y_partial, y, idx in test_dataloader:
 
                 x = to_torch_var(X, requires_grad=False).float()
@@ -138,26 +200,35 @@ def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=Fal
 
             is_correct = torch.cat(is_correct, dim=0)
             acc = torch.mean(is_correct.float()).detach().cpu().numpy()
+            model.train()
+            '''
+            acc = 0
 
-            g_val /= current_iter
-            #h_val /= current_iter
-            r_val /= current_iter
-            #sy_hat_dp_val = sum(sy_hat_dp_vals) / len(sy_hat_dp_vals) 
-            print("Epoch [{}], g:{:.2e}, h:{:.2e}, r:{:.2e}, acc:{:.2e}".format(current_epoch+1, g_val, h_val, r_val, acc))
-            train_data_iterator = iter(train_dataloader)
-            data_train, y_partial_train, _, idx_train = next(train_data_iterator)
+            l_val /= current_iter
+            h_val /= current_iter
+            if not monitor:
+                print("Epoch [{}], l:{:.2e}, h:{:.2e}, acc:{:.2e}".format(current_epoch+1, l_val, h_val, acc))
+            else:
+                sr_tr, pr_tr, zr_tr = loss_monitor(model, train_datasets)
+                sr_tst, pr_tst, zr_tst = loss_monitor(model, test_datasets)
+                print(current_epoch, sr_tr, sr_tst, pr_tr, pr_tst, zr_tr, zr_tst) 
+
             current_epoch += 1
             current_iter = 0
-            g_val = 0.
+            l_val = 0.
             h_val = 0.
-            r_val = 0.
 
-            model.train()
+            train_data_iterator = iter(train_dataloader)
+            data_train, y_partial_train, _, idx_train = next(train_data_iterator)
 
-        if current_epoch == num_epoch // 2 and auto_beta:
+
+        if current_epoch == num_epoch // 4 and auto_beta:
             beta = 1.
 
         if current_epoch == num_epoch:
+            #sr_tr, pr_tr, zr_tr = loss_monitor(model, train_datasets)
+            #sr_tst, pr_tst, zr_tst = loss_monitor(model, test_datasets)
+            #print(current_epoch, sr_tr, sr_tst, pr_tr, pr_tst, zr_tr, zr_tst)
             break
 
         x = to_torch_var(data_train, requires_grad=False).float()
@@ -174,19 +245,22 @@ def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=Fal
         #s_hat = sharpen(s_hat, .1)
         ss_hat = s * s_hat
         ss_hat_dp = ss_hat.sum(1)
-        #ss_hat_dp = torch.clamp(ss_hat_dp, 0., 1.)
-        g = -torch.log(ss_hat_dp + 1e-10)
+        ss_hat_dp = torch.clamp(ss_hat_dp, 0., 1.)
+        l = -torch.log(ss_hat_dp + 1e-10)
+        l_mean = torch.mean(l)
         
         if simp_loss:
             if beta != .0:
                 h = -(s_hat * torch.log(s_hat + 1e-10)).sum(1)
-                L = torch.mean(g) + beta * torch.mean(h)
+                h_mean = torch.mean(h)
+                L = l_mean + beta * h_mean
             else:
-                L = torch.mean(g)
+                L = l_mean
         else: 
             ss_hat /= ss_hat_dp.view(ss_hat_dp.size(0),-1)
             h = -(ss_hat * torch.log(ss_hat + 1e-10)).sum(1)
-            L = torch.mean(g) + beta * torch.mean(h)
+            h_mean = torch.mean(h)
+            L = l_mean + beta * h_mean
 
         if self_teach:
             y_f_ema = model_ema(x)
@@ -196,13 +270,9 @@ def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=Fal
             k = (s_hat * ( torch.log(s_hat + 1e-10) - torch.log(s_ema + 1e-10) )).sum(1)
             L += eta * torch.mean(k)
 
-        g_val += torch.mean(g).data.tolist()
+        l_val += l_mean.data.tolist()
         if beta != .0:
-            h_val += torch.mean(h).data.tolist()
-        #s_hat_sharp = sharpen(s_hat, .1)
-        #ss_hat_sharp = s * s_hat
-        #ss_hat_sharp_dp = ss_hat_sharp.sum(1)
-        #r_val += torch.mean(ss_hat_sharp_dp).data.tolist()
+            h_val += h_mean.data.tolist()
 
         if torch.isnan(L).any():
             print("Warning: NaN Loss")

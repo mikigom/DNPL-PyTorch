@@ -20,9 +20,6 @@ MODEL_NAME_TUPLE = ("linear",
                     "deep",
                     "newdeep")
 
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-dset', required=True)
@@ -34,7 +31,6 @@ parser.add_argument('-num_epoch', required=False)
 parser.add_argument('-cv_fold', required=False)
 parser.add_argument('-fix_data_seed', required=False)
 parser.add_argument('-fix_train_seed', required=False)
-
 
 args = parser.parse_args()
 dset_name = args.dset
@@ -56,8 +52,16 @@ if not model_name in MODEL_NAME_TUPLE:
 p_list = (.7,.1)
 
 if not fix_data_seed or not fix_train_seed:
-    import quantumrandom as qrng
-    qrngs = iter(qrng.get_data(array_length = len(p_list)*3+len(p_list)*cv_fold*3))
+    #import quantumrandom as qrng
+    #seeds = iter(qrng.get_data(array_length = len(p_list)*3+len(p_list)*cv_fold*3))
+    seeds = []
+    for i in range(len(p_list)*3+len(p_list)*cv_fold*3):
+        seeds.append(datetime.now().microsecond)
+        sleep(0.01)
+    seeds = iter(seeds)
+else:
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 if __name__ == '__main__':
 
@@ -74,9 +78,9 @@ if __name__ == '__main__':
             kf = KFold(n_splits=cv_fold, shuffle=True, random_state=4)
             datasets = UCI_Datasets(dset_name, r=None, p=p, eps=None, binomial=True)
         else:
-            torch.manual_seed(next(qrngs))
-            np.random.seed(next(qrngs))
-            random.seed(next(qrngs))
+            torch.manual_seed(next(seeds))
+            np.random.seed(next(seeds))
+            random.seed(next(seeds))
             kf = KFold(n_splits=cv_fold, shuffle=True)
             datasets = UCI_Datasets(dset_name, r=None, p=p, eps=None, binomial=True)
 
@@ -90,9 +94,9 @@ if __name__ == '__main__':
                 np.random.seed(2*i+10)
                 random.seed(3*i+15)
             else:
-                torch.manual_seed(next(qrngs))
-                np.random.seed(next(qrngs))
-                random.seed(next(qrngs))
+                torch.manual_seed(next(seeds))
+                np.random.seed(next(seeds))
+                random.seed(next(seeds))
 
             train_datasets = copy.deepcopy(datasets)
             train_datasets.set_mode('custom', train_idx)
