@@ -6,6 +6,7 @@ import argparse, random, pickle, copy
 from datasets.uci_datasets import UCI_Datasets
 from sklearn.model_selection import KFold
 from datetime import datetime
+from time import sleep
 
 DATASET_NAME_TUPLE = ("yeast",
                       "texture",
@@ -25,7 +26,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-dset', required=True)
 parser.add_argument('-use_norm', required=False)
 parser.add_argument('-model', required=False)
-parser.add_argument('-simp_loss', required=False)
 parser.add_argument('-beta', required=False)
 parser.add_argument('-num_epoch', required=False)
 parser.add_argument('-cv_fold', required=False)
@@ -36,7 +36,6 @@ args = parser.parse_args()
 dset_name = args.dset
 use_norm = True if args.use_norm == None else args.use_norm.lower() in ('true', '1', 't', 'y')
 model_name = "linear" if args.model == None else args.model
-simp_loss = True if args.simp_loss == None else args.simp_loss.lower() in ('true', '1', 't', 'y')
 num_epoch = 500 if args.num_epoch == None else int(args.num_epoch)
 cv_fold = 5 if args.cv_fold == None else int(args.cv_fold)
 beta = 1e-3 if args.beta == None else float(args.beta)
@@ -104,7 +103,7 @@ if __name__ == '__main__':
             test_datasets = copy.deepcopy(datasets)
             test_datasets.set_mode('custom', test_idx)
              
-            acc = train.main(train_datasets, test_datasets, bs=128, beta=beta, use_norm=use_norm, num_epoch=num_epoch, model_name=model_name, simp_loss=simp_loss)
+            acc = train.main(train_datasets, test_datasets, bs=128, beta=beta, use_norm=use_norm, num_epoch=num_epoch, model_name=model_name)
             print("acc: %f, fold: %s/%s, p: %s" % (acc, str(i+1), str(cv_fold), str(p)) )
             accs.append(acc)
 
@@ -113,8 +112,8 @@ if __name__ == '__main__':
 
         acc_avg = np.mean(accs)
         acc_std = np.std(accs)
-        f.write("runid: %s, beta: %s, model: %s, simp_loss: %s, epoch: %s, use_norm: %s, fix_data_seed: %s, fix_train_seed: %s, p: %s, acc_avg: %s, acc_std: %s, cv_fold: %s\n"  
-                % (runid, str(beta), str(model_name), str(simp_loss), str(num_epoch), str(use_norm), str(fix_data_seed), 
+        f.write("runid: %s, beta: %s, model: %s, fsp_iden: %s, epoch: %s, use_norm: %s, fix_data_seed: %s, fix_train_seed: %s, p: %s, acc_avg: %s, acc_std: %s, cv_fold: %s\n"  
+                % (runid, str(beta), str(model_name), str(fsp_iden), str(num_epoch), str(use_norm), str(fix_data_seed), 
                     str(fix_train_seed), str(p), str(acc_avg), str(acc_std), str(cv_fold)))
         f.flush()
 

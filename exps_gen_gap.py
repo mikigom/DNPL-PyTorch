@@ -25,7 +25,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-dset', required=True)
 parser.add_argument('-use_norm', required=False)
 parser.add_argument('-model', required=False)
-parser.add_argument('-simp_loss', required=False)
 parser.add_argument('-beta', required=False)
 parser.add_argument('-num_epoch', required=False)
 parser.add_argument('-repeats', required=False)
@@ -36,7 +35,6 @@ args = parser.parse_args()
 dset_name = args.dset
 use_norm = False if args.use_norm == None else args.use_norm.lower() in ('true', '1', 't', 'y')
 model_name = "medium" if args.model == None else args.model
-simp_loss = True if args.simp_loss == None else args.simp_loss.lower() in ('true', '1', 't', 'y')
 num_epoch = 200 if args.num_epoch == None else int(args.num_epoch)
 repeats = 10 if args.repeats == None else int(args.repeats)
 beta = 1e-3 if args.beta == None else float(args.beta)
@@ -106,4 +104,4 @@ if __name__ == '__main__':
         test_datasets = copy.deepcopy(datasets)
         test_datasets.set_mode('custom', test_idx)
 
-        train.main(train_datasets, test_datasets, bs=128, beta=beta, use_norm=use_norm, num_epoch=num_epoch, model_name=model_name, simp_loss=simp_loss)
+        train.main(train_datasets, test_datasets, bs=128, beta=beta, use_norm=use_norm, num_epoch=num_epoch, model_name=model_name)

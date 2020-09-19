@@ -31,7 +31,6 @@ dset_name = args.dset
 p = float(args.p)
 model_name = "newdeep" if args.model == None else args.model
 use_norm = False if args.use_norm == None else args.use_norm.lower() in ('true', '1', 't', 'y')
-simp_loss = True if args.simp_loss == None else args.simp_loss.lower() in ('true', '1', 't', 'y')
 num_epoch = 500 if args.num_epoch == None else int(args.num_epoch)
 beta = 1e-3 if args.beta == None else float(args.beta)
 fix_data_seed = False if args.fix_data_seed == None else args.fix_data_seed.lower() in ('true', '1', 't', 'y')
@@ -95,7 +94,7 @@ if __name__ == '__main__':
             np.random.seed(next(seeds))
             random.seed(next(seeds))
                 
-        acc = train.main(train_datasets, test_datasets, bs=256, beta=beta, use_norm=False, num_epoch=num_epoch, model_name=model_name, simp_loss=simp_loss)
+        acc = train.main(train_datasets, test_datasets, bs=256, beta=beta, use_norm=False, num_epoch=num_epoch, model_name=model_name)
         #accs.append(acc)
 
         #with open('exp_img_'+dset_name+'/'+runid+'.acc', 'wb') as acc_out:

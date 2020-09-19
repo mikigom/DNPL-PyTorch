@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from models.models import *
 from utils import to_torch_var
 from yogi.yogi import Yogi
+from vat import VATLoss
 
 
 def mixup(x, y, alpha):
@@ -99,17 +100,22 @@ def loss_monitor(model, datasets, norm_params=None):
     return surrogate_risk_val, partial_risk_val, zeroone_risk_val
 
 
-def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=False, model_name='medium', simp_loss=True, 
-        args_etc = {'use_mixup': False, 'alpha': 0.2, 'self_teach': False, 'gamma': 0.999, 'eta': 0.5}):
-    
+def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=False, model_name='medium', 
+        args_etc = {'use_mixup': False, 'alpha': 0.2, 'self_teach': False, 'gamma': 0.999, 'eta': 0.5, 'use_vat': True, 'xi': 10.0, 'eps': 1.0, 'ip': 10}):
+
     monitor = False
     
-    auto_beta = True if beta < 0. else False
+    #auto_beta = True if beta < 0. else False
+    auto_beta = False
     use_mixup = args_etc['use_mixup']
     alpha = args_etc['alpha']
     self_teach = args_etc['self_teach']
     gamma = args_etc['gamma']
     eta = args_etc['eta']
+    use_vat = args_etc['use_vat']
+    xi = args_etc['xi']
+    eps = args_etc['eps']
+    ip = args_etc['ip']
 
     assert train_datasets.dataset_name == test_datasets.dataset_name
 
@@ -178,49 +184,51 @@ def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=Fal
         try:
             data_train, y_partial_train, _, idx_train = next(train_data_iterator)
         except StopIteration:
-            '''
-            model.eval()
+            current_epoch += 1
 
-            is_correct = []
-            for X, y_partial, y, idx in test_dataloader:
+            #if current_epoch == num_epoch:
+            if True:
+                model.eval()
 
-                x = to_torch_var(X, requires_grad=False).float()
-                s = torch.DoubleTensor(y_partial).cuda().float()
+                is_correct = []
+                for X, y_partial, y, idx in test_dataloader:
 
-                if use_norm:
-                    x = (x - feature_mean) * inv_feature_std
-                y = to_torch_var(y, requires_grad=False).long()
-                y = torch.argmax(y, dim=1)
+                    x = to_torch_var(X, requires_grad=False).float()
+                    s = torch.DoubleTensor(y_partial).cuda().float()
 
-                y_hat = model(x)
-                y_hat = torch.softmax(y_hat, dim=1)
-                #y_hat = sharpen(y_hat, .1)
+                    if use_norm:
+                        x = (x - feature_mean) * inv_feature_std
+                    y = to_torch_var(y, requires_grad=False).long()
+                    y = torch.argmax(y, dim=1)
 
-                is_correct.append(torch.argmax(y_hat, dim=1) == y)
+                    y_hat = model(x)
+                    y_hat = torch.softmax(y_hat, dim=1)
+                    #y_hat = sharpen(y_hat, .1)
 
-            is_correct = torch.cat(is_correct, dim=0)
-            acc = torch.mean(is_correct.float()).detach().cpu().numpy()
-            model.train()
-            '''
-            acc = 0
+                    is_correct.append(torch.argmax(y_hat, dim=1) == y)
+
+                is_correct = torch.cat(is_correct, dim=0)
+                acc = torch.mean(is_correct.float()).detach().cpu().numpy()
+                model.train()
+            else:
+                acc = 0.0
 
             l_val /= current_iter
             h_val /= current_iter
+            #if not monitor and current_epoch % 100 == 0:
             if not monitor:
-                print("Epoch [{}], l:{:.2e}, h:{:.2e}, acc:{:.2e}".format(current_epoch+1, l_val, h_val, acc))
-            else:
-                sr_tr, pr_tr, zr_tr = loss_monitor(model, train_datasets)
-                sr_tst, pr_tst, zr_tst = loss_monitor(model, test_datasets)
-                print(current_epoch, sr_tr, sr_tst, pr_tr, pr_tst, zr_tr, zr_tst) 
+                print("Epoch [{}], l:{:.2e}, h:{:.2e}, acc:{:.2e}".format(current_epoch, l_val, h_val, acc))
+            #else:
+            #    sr_tr, pr_tr, zr_tr = loss_monitor(model, train_datasets)
+            #    sr_tst, pr_tst, zr_tst = loss_monitor(model, test_datasets)
+            #    print(current_epoch, sr_tr, sr_tst, pr_tr, pr_tst, zr_tr, zr_tst) 
 
-            current_epoch += 1
             current_iter = 0
             l_val = 0.
             h_val = 0.
 
             train_data_iterator = iter(train_dataloader)
             data_train, y_partial_train, _, idx_train = next(train_data_iterator)
-
 
         if current_epoch == num_epoch // 4 and auto_beta:
             beta = 1.
@@ -238,29 +246,25 @@ def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=Fal
         if use_mixup:
             #s /= s.sum(1).view(-1,1).expand(-1, s.size(1))
             x, s, lamb, indices = mixup(x, s, alpha)
+        if use_vat and beta != .0:
+            vat_loss = VATLoss(xi=xi, eps=eps, ip=ip)
+            lds = vat_loss(model, x)
 
         # Line 12
-        s_hat = model(x)
-        s_hat = F.softmax(s_hat, dim=1)
-        #s_hat = sharpen(s_hat, .1)
+        f = model(x)
+        s_hat = F.softmax(f, dim=1)
         ss_hat = s * s_hat
         ss_hat_dp = ss_hat.sum(1)
         ss_hat_dp = torch.clamp(ss_hat_dp, 0., 1.)
         l = -torch.log(ss_hat_dp + 1e-10)
         l_mean = torch.mean(l)
         
-        if simp_loss:
-            if beta != .0:
-                h = -(s_hat * torch.log(s_hat + 1e-10)).sum(1)
-                h_mean = torch.mean(h)
-                L = l_mean + beta * h_mean
-            else:
-                L = l_mean
-        else: 
-            ss_hat /= ss_hat_dp.view(ss_hat_dp.size(0),-1)
-            h = -(ss_hat * torch.log(ss_hat + 1e-10)).sum(1)
-            h_mean = torch.mean(h)
-            L = l_mean + beta * h_mean
+        if beta != .0:
+            #h = -(s_hat * torch.log(s_hat + 1e-10)).sum(1)
+            #h_mean = torch.mean(h)
+            L = l_mean + beta * lds
+        else:
+            L = l_mean
 
         if self_teach:
             y_f_ema = model_ema(x)
@@ -272,7 +276,7 @@ def main(train_datasets, test_datasets, bs, beta=1., num_epoch=100, use_norm=Fal
 
         l_val += l_mean.data.tolist()
         if beta != .0:
-            h_val += h_mean.data.tolist()
+            h_val += lds.data.tolist()
 
         if torch.isnan(L).any():
             print("Warning: NaN Loss")

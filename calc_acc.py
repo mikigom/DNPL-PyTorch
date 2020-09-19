@@ -42,12 +42,12 @@ if dset_name in UCI_DATASET_NAME_TUPLE:
     accs7 = []
 
     for d in d_list:
-        if d['p']=='0.1':
-            #print( (d['runid'], float(d['p'])) )
+        if float(d['p'])==0.1 and float(d['beta'])==0.0:
+            print( (d['runid'], float(d['p'])) )
             with open(path+d['runid']+'.acc', 'rb') as acc_f1:
                 accs1.append(pickle.load(acc_f1))
-        elif d['p']=='0.7':
-            #print( (d['runid'], float(d['p'])) )
+        elif float(d['p'])==0.7 and float(d['beta'])==0.0:
+            print( (d['runid'], float(d['p'])) )
             with open(path+d['runid']+'.acc', 'rb') as acc_f7:
                 accs7.append(pickle.load(acc_f7))
 
@@ -60,8 +60,8 @@ if dset_name in REAL_DATASET_NAME_TUPLE:
     accs = []
 
     for d in d_list:
-        if d['epoch']=='200':
-            #print( (d['runid'], float(d['p'])) )
+        if d['epoch']=='200' and float(d['beta'])==0.0:
+            print( (d['runid'], float(d['beta'])) )
             with open(path+d['runid']+'.acc', 'rb') as acc_f:
                 accs.append(pickle.load(acc_f))
 
