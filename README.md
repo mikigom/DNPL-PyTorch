@@ -10,7 +10,7 @@ python3 exps_real.py --dset yahoo --model medium
 
 ### Datasets
 
-All datasets used in this work are provided by [Min-Ling ZHANG's homepage](http://palm.seu.edu.cn/zhangml/).
+All datasets used in this work are provided by [Min-Ling ZHANG](http://palm.seu.edu.cn/zhangml/).
 
 ### Reference
 ```
