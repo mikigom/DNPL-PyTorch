@@ -8,8 +8,7 @@ from sklearn.model_selection import KFold
 from datetime import datetime
 from time import sleep
 
-DATASET_NAME_TUPLE = ("bird",
-                      "lost",
+DATASET_NAME_TUPLE = ("lost",
                       "msrcv2",
                       "soccer",
                       "yahoo")
