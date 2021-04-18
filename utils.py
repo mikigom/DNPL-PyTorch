@@ -1,82 +1,72 @@
 import torch
-import torch.nn as nn
+import copy
 import torch.nn.functional as F
 from torch.autograd import Variable
-
+from torch.utils.data import DataLoader
 
 def to_torch_var(x, requires_grad=True):
     if torch.cuda.is_available():
         x = x.cuda()
     return Variable(x, requires_grad=requires_grad)
 
+def sharpen(p, T):
+    p = torch.pow(p, 1.0/T)
+    p /= p.sum(1).view(-1,1).expand(-1, p.size(1))
+    return p
 
-class ExampleLabelWeights(nn.Module):
-    def __init__(self, cardinality):
-        super(ExampleLabelWeights, self).__init__()
+def loss_monitor(model, datasets, norm_params=None):
 
-        params = []
-        for card in cardinality:
-            parameter = torch.nn.Parameter(data=torch.ones(card), requires_grad=True)
-            params.append(parameter)
+    datasets_copy = copy.deepcopy(datasets)
+    model_copy = copy.deepcopy(model)
+    dataloader = DataLoader(datasets_copy, batch_size=min((256, len(datasets_copy))),
+        num_workers=4, drop_last=False)
+    data_iterator = iter(dataloader)
+    
+    model_copy.eval()
 
-        self.params = nn.ParameterList(params).cuda()
+    surrogate_risk_val = 0.
+    partial_risk_val = 0.
+    zeroone_risk_val = 0.
 
-    def forward(self, inputs_idx):
-        weights = []
-        for i, example_label_idx in enumerate(inputs_idx):
-            example_label_weight = self.params[example_label_idx]
-            example_label_weight_softmax = torch.softmax(example_label_weight, dim=0)
-            weights.append(example_label_weight_softmax)
+    current_iter = 0
 
-        return weights
+    is_correct = []
+    for data, y_partial, y, idx in data_iterator:
+        current_iter += 1
+        
+        x = to_torch_var(data, requires_grad=False).float()
+        s = torch.DoubleTensor(y_partial).cuda().float()
+        y = to_torch_var(y, requires_grad=False).long()
+        y = torch.argmax(y, dim=1)
 
-    def update_last_used_weights(self, grads, lr):
-        for param, grad in zip(self.params, grads):
-            if grad is not None:
-                param.data = param.data - lr * grad
+        if norm_params is not None:
+            feature_mean = norm_params[0]
+            inv_feature_std = norm_params[1]
+            x = (x - feature_mean) * inv_feature_std
+        
+        s_hat = model_copy(x)
+        s_hat = F.softmax(s_hat, dim=1)
+        ss_hat = s * s_hat
+        ss_hat_dp = ss_hat.sum(1)
+        ss_hat_dp = torch.clamp(ss_hat_dp, 0., 1.)
+        l = -torch.log(ss_hat_dp + 1e-10)
+        surrogate_risk_val += torch.mean(l).data.tolist()
 
+        y_hat = sharpen(s_hat, .1)
+        sy_hat = s * y_hat
+        sy_hat_dp = sy_hat.sum(1)
+        sy_hat_dp = torch.clamp(sy_hat_dp, 0., 1.)
+        partial_risk_val += torch.mean(sy_hat_dp).data.tolist()
 
-class FocalLoss(nn.Module):
-    def __init__(self, gamma=0, alpha=None, size_average=True):
-        super(FocalLoss, self).__init__()
-        self.gamma = gamma
-        self.alpha = alpha
-        if isinstance(alpha,(float,int)): self.alpha = torch.Tensor([alpha,1-alpha])
-        if isinstance(alpha,list): self.alpha = torch.Tensor(alpha)
-        self.size_average = size_average
+        y_hat = torch.argmax(s_hat, dim=1)
+        is_correct.append(y_hat == y)
 
-    def forward(self, input, target):
-        if input.dim()>2:
-            input = input.view(input.size(0),input.size(1),-1)  # N,C,H,W => N,C,H*W
-            input = input.transpose(1,2)    # N,C,H*W => N,H*W,C
-            input = input.contiguous().view(-1,input.size(2))   # N,H*W,C => N*H*W,C
-        target = target.view(-1,1)
+    surrogate_risk_val /= current_iter 
+    partial_risk_val /= current_iter
+    is_correct = torch.cat(is_correct, dim=0)
+    zeroone_risk_val = torch.mean(is_correct.float()).detach().cpu().numpy()
 
-        logpt = torch.log(input)
-        logpt = logpt.gather(1, target)
-        logpt = logpt.view(-1)
-        pt = Variable(logpt.data.exp())
+    del model_copy
+    del datasets_copy
 
-        if self.alpha is not None:
-            if self.alpha.type()!=input.data.type():
-                self.alpha = self.alpha.type_as(input.data)
-            at = self.alpha.gather(0,target.data.view(-1))
-            logpt = logpt * Variable(at)
-
-        loss = -1 * (1-pt)**self.gamma * logpt
-        if self.size_average:
-            return loss.mean()
-        else:
-            return loss.sum()
-
-
-if __name__ == '__main__':
-    hloss = HLoss()
-
-    a = torch.ones((1, 4))
-    b = torch.tensor([[1., 2., 3, 4]])
-
-    print(F.softmax(a, dim=1), F.softmax(b, dim=1))
-
-    print(hloss(a))
-    print(hloss(b))
+    return surrogate_risk_val, partial_risk_val, zeroone_risk_val
