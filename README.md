@@ -12,10 +12,10 @@ python dnpl.py -dset yahoo -model medium
 
 All datasets used in this work are provided by [Min-Ling ZHANG](http://palm.seu.edu.cn/zhangml/).
 
-Lost: http://palm.seu.edu.cn/zhangml/files/lost.rar
-MSRCv2: http://palm.seu.edu.cn/zhangml/files/MSRCv2.rar
-Soccer: http://palm.seu.edu.cn/zhangml/files/Soccer%20Player.rar
-Yahoo! News: http://palm.seu.edu.cn/zhangml/files/Yahoo!%20News.rar
+Lost: http://palm.seu.edu.cn/zhangml/files/lost.rar <br/>
+MSRCv2: http://palm.seu.edu.cn/zhangml/files/MSRCv2.rar <br/>
+Soccer: http://palm.seu.edu.cn/zhangml/files/Soccer%20Player.rar <br/>
+Yahoo! News: http://palm.seu.edu.cn/zhangml/files/Yahoo!%20News.rar <br/>
 
 ### Reference
 ```
