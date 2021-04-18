@@ -5,40 +5,35 @@ from torch.utils.data import Dataset
 from scipy.io import loadmat
 
 
-DATASET_NAME_TUPLE = ("bird",
-                      "fgnet",
-                      "lost",
-                      "msrcv2",
-                      "soccer",
-                      "yahoo")
+DATASET_NAME_TUPLE = ("lost", "msrcv2", "soccer", "yahoo")
 
-
-class Real_Datasets(Dataset):
-    def __init__(self, dataset_name, path="data/", test_fold=10, val_fold=10):
+class PLL_Datasets(Dataset):
+    def __init__(self, dataset_name, path="datasets/", test_fold=10, val_fold=10):
         assert dataset_name in DATASET_NAME_TUPLE
 
         if dataset_name == DATASET_NAME_TUPLE[0]:
             matfile_path = os.path.join(path, "BirdSong.mat")
         elif dataset_name == DATASET_NAME_TUPLE[1]:
-            matfile_path = os.path.join(path, "FG-NET.mat")
-        elif dataset_name == DATASET_NAME_TUPLE[2]:
             matfile_path = os.path.join(path, "lost.mat")
-        elif dataset_name == DATASET_NAME_TUPLE[3]:
+        elif dataset_name == DATASET_NAME_TUPLE[2]:
             matfile_path = os.path.join(path, "MSRCv2.mat")
-        elif dataset_name == DATASET_NAME_TUPLE[4]:
+        elif dataset_name == DATASET_NAME_TUPLE[3]:
             matfile_path = os.path.join(path, "Soccer Player.mat")
-        elif dataset_name == DATASET_NAME_TUPLE[5]:
+        elif dataset_name == DATASET_NAME_TUPLE[4]:
             matfile_path = os.path.join(path, "Yahoo! News.mat")
         else:
             raise AttributeError("Dataset Name is not defined.")
+        
         self.matfile_path = matfile_path
-
-        dataset = loadmat(self.matfile_path)
+        
         # an Mxd matrix w.r.t. the feature epresentations,
         # where M is the number of instances and d is the number of features.
+        dataset = loadmat(self.matfile_path)
         self.data = dataset['data']
+        
         # a QxM matrix w.r.t. the candidate labeling information, where Q is the number of possible class labels.
         self.target = dataset['target']
+        
         # a QxM matrix w.r.t. the ground-truth labeling	information.
         self.target_partial = dataset['partial_target']
         self.dataset_name = dataset_name

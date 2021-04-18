@@ -1,20 +1,16 @@
+### Move this file to the parent directory to run this code.
+
 import numpy as np
 import pickle, argparse
 
-REAL_DATASET_NAME_TUPLE = ("lost",
-                           "msrcv2",
-                           "soccer",
-                           "yahoo")
+REAL_DATASET_NAME_TUPLE = ("lost", "msrcv2", "soccer", "yahoo")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-dset', required=True)
 args = parser.parse_args()
 dset_name = args.dset
 
-if dset_name in REAL_DATASET_NAME_TUPLE:
-    middle = '_real_'
-
-path = 'exp'+middle+dset_name+'/'
+path = '../results'+middle+dset_name+'/'
 d_list = []
 with open(path+'records.txt','r') as f:
     lines = [line.rstrip('\n') for line in f]
@@ -25,7 +21,6 @@ with open(path+'records.txt','r') as f:
             key, val = keyval.split(': ')
             d[key] = val
         d_list.append(d)
-
 
 if dset_name in REAL_DATASET_NAME_TUPLE:
     accs = []
@@ -39,4 +34,4 @@ if dset_name in REAL_DATASET_NAME_TUPLE:
     accs = np.array(accs).flatten()
     print(accs)
     print(dset_name)
-    print('acc: %s, std: %s'% (str(accs.mean()), str(accs.std())) ) 
+    print('acc: %s, std: %s'% (str(accs.mean()), str(accs.std())) )
